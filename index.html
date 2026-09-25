@@ -4,118 +4,26 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#F2B417">
+<meta name="description" content="TOWY TAXI — pre-book your taxi in Carmarthen and around.">
+<title>TOWY TAXI — book a ride</title>
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="TOWY TAXI">
-<meta name="description" content="TOWY TAXI — pre-book your taxi in Carmarthen and around.">
-<title>TOWY TAXI — book a ride</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&display=swap">
-<style>
-:root{
-  box-sizing:border-box;
-  padding-top:env(safe-area-inset-top,0px);
-  padding-bottom:env(safe-area-inset-bottom,0px);
-  --bg:#FBFAF6; --card:#FFFFFF; --ink:#17150F; --muted:#6E6A5E; --line:#E7E3D8;
-  --accent:#F2B417; --accent-ink:#3A2E05;
-  --ok:#2E7D4F; --ok-bg:#E8F4EC; --bad:#B3372E; --bad-bg:#FBEBE9;
-  --wait:#7A5A0B; --wait-bg:#FCF3DC; --offer:#155E8A; --offer-bg:#E7F1F8;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#14130F; --card:#1E1C16; --ink:#F2EFE6; --muted:#A7A294; --line:#35322A;
-    --accent:#F2B417; --accent-ink:#14130F;
-    --ok:#7FCB9B; --ok-bg:#1D3226; --bad:#F0A199; --bad-bg:#3A1F1C;
-    --wait:#E8C465; --wait-bg:#3A3016; --offer:#8FC3E4; --offer-bg:#1B2E3B;
-  }
-}
-:root[data-theme="dark"]{
-  --bg:#14130F; --card:#1E1C16; --ink:#F2EFE6; --muted:#A7A294; --line:#35322A;
-  --accent:#F2B417; --accent-ink:#14130F;
-  --ok:#7FCB9B; --ok-bg:#1D3226; --bad:#F0A199; --bad-bg:#3A1F1C;
-  --wait:#E8C465; --wait-bg:#3A3016; --offer:#8FC3E4; --offer-bg:#1B2E3B;
-}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
-html,body{margin:0;padding:0}
-*,*::before,*::after{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font-family:'Outfit',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:16px;line-height:1.55}
-.wrap{max-width:460px;margin:0 auto;padding:0 16px 48px}
-header{padding:20px 0 0}
-.brand{display:flex;align-items:baseline;gap:10px}
-.brand h1{font-size:26px;font-weight:600;margin:0;letter-spacing:-.01em}
-.brand span{color:var(--muted);font-size:14px}
-.checker{height:10px;margin:14px -16px 0;background:
-  repeating-conic-gradient(var(--ink) 0% 25%, var(--accent) 0% 50%) 0 0/20px 20px}
-nav{display:flex;gap:6px;margin:16px 0 20px}
-nav button{flex:1;padding:10px 6px;border:1px solid var(--line);background:var(--card);color:var(--muted);
-  border-radius:10px;font:inherit;font-size:14px;cursor:pointer}
-nav button.on{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px}
-h2{font-size:18px;font-weight:600;margin:0 0 4px}
-.sub{color:var(--muted);font-size:14px;margin:0 0 14px}
-label{display:block;font-size:13px;color:var(--muted);margin:12px 0 5px}
-input,select,textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;
-  background:var(--bg);color:var(--ink);font:inherit;font-size:15px}
-input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
-.row{display:flex;gap:10px}
-.row>div{flex:1;min-width:0}
-.btn{display:block;width:100%;margin-top:16px;padding:13px;border:none;border-radius:10px;
-  background:var(--accent);color:var(--accent-ink);font:inherit;font-size:16px;font-weight:600;cursor:pointer}
-.btn:active{transform:scale(.99)}
-.btn.quiet{background:var(--card);color:var(--ink);border:1px solid var(--line);font-weight:400}
-.btn.small{width:auto;display:inline-block;margin:10px 8px 0 0;padding:9px 14px;font-size:14px}
-.btn.ok{background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok)}
-.btn.bad{background:transparent;color:var(--bad);border:1px solid var(--line)}
-.err{color:var(--bad);font-size:13px;margin-top:8px;display:none}
-.note{color:var(--muted);font-size:13px;text-align:center;margin-top:10px}
-.chip{display:inline-block;font-size:12.5px;padding:3px 10px;border-radius:999px}
-.s-new{background:var(--wait-bg);color:var(--wait)}
-.s-confirmed{background:var(--ok-bg);color:var(--ok)}
-.s-declined,.s-cancelled{background:var(--bad-bg);color:var(--bad)}
-.s-counter{background:var(--offer-bg);color:var(--offer)}
-.s-done{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
-.ride{border-top:1px solid var(--line);padding:14px 0}
-.ride:first-of-type{border-top:none;padding-top:4px}
-.ride .top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
-.ride .when{font-weight:600;font-size:15px}
-.ride .route{font-size:14.5px;margin:2px 0}
-.ride .meta{font-size:13px;color:var(--muted);margin-top:3px}
-.reason{font-size:13.5px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:8px}
-.empty{color:var(--muted);font-size:14px;text-align:center;padding:18px 0}
-.banner{background:var(--wait-bg);color:var(--wait);border-radius:10px;padding:10px 12px;font-size:13.5px;margin-bottom:14px;display:none}
-.modal-bg{position:absolute;inset:0;background:rgba(10,9,5,.5);display:none;align-items:flex-end;justify-content:center;z-index:5}
-.modal-bg.open{display:flex}
-.modal{background:var(--card);border-radius:16px 16px 0 0;padding:20px 18px 26px;width:100%;max-width:460px}
-.modal h3{margin:0 0 4px;font-size:17px;font-weight:600}
-.stage{position:relative;min-height:100vh}
-.preset{display:block;width:100%;text-align:left;margin-top:8px;padding:11px 12px;border:1px solid var(--line);
-  border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;font-size:14.5px;cursor:pointer}
-.preset.sel{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:-1px}
-.hint{font-size:13px;color:var(--muted);margin:5px 0 0;min-height:0}
-.hint.okc{color:var(--ok)}.hint.badc{color:var(--bad)}
-.leaflet-container{font:inherit}
-.badge-count{background:var(--accent);color:var(--accent-ink);border-radius:999px;font-size:12px;padding:1px 7px;margin-left:5px;font-weight:600}
-.star{background:none;border:none;font-size:28px;line-height:1;color:var(--muted);cursor:pointer;padding:2px 5px}
-.star:active{color:var(--accent)}
-.stars-done{color:var(--accent);font-size:16px}
-</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="stage">
 <div class="wrap">
-  <header>
-    <div class="brand"><h1>TOWY TAXI</h1><span>Carmarthen &amp; around</span></div>
-  </header>
+  <header><div class="brand"><h1>TOWY TAXI</h1><span>Carmarthen &amp; around</span></div></header>
   <div class="checker" aria-hidden="true"></div>
-
-  <div class="banner" id="offlineBanner">Demo mode — bookings won't be saved between visits.</div>
 
   <nav id="nav" style="margin-top:18px">
     <button data-tab="book" class="on">Book a ride</button>
     <button data-tab="mine">My rides <span id="mineCount" class="badge-count" style="display:none"></span></button>
-    <button data-tab="driver" id="driverTab">Driver <span id="newCount" class="badge-count" style="display:none"></span></button>
   </nav>
 
   <section id="tab-book">
@@ -126,41 +34,52 @@ input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;bo
       <input id="fName" type="text" autocomplete="name" placeholder="Sarah Evans">
       <label for="fPhone">Mobile number</label>
       <input id="fPhone" type="tel" autocomplete="tel" placeholder="07700 900123">
+
       <label for="fFrom">Pick up from — address and postcode</label>
       <div class="row">
         <div style="flex:1.6"><input id="fFrom" type="text" placeholder="12 King Street, Carmarthen"></div>
         <div><input id="fFromPc" type="text" autocomplete="postal-code" placeholder="SA31 1BH" style="text-transform:uppercase"></div>
       </div>
       <p class="hint" id="fromPcInfo"></p>
-      <button type="button" class="btn small quiet" id="pinBtn" style="margin-top:8px">📍 Set exact pick-up spot on map</button>
-      <div id="mapWrap" style="display:none;margin-top:10px">
-        <div id="map" style="height:260px;border-radius:10px;border:1px solid var(--line);z-index:0"></div>
+      <button type="button" class="btn small quiet" id="pickBtn" style="margin-top:8px">📍 Set exact pick-up spot</button>
+      <div id="pickWrap" style="display:none;margin-top:10px">
+        <div id="pickMap" class="mapbox"></div>
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px">
-          <button type="button" class="btn small quiet" id="locBtn" style="margin:0">Use my location</button>
-          <span class="hint" id="pinInfo" style="text-align:right">Tap the map where you'll be waiting</span>
+          <button type="button" class="btn small quiet" id="pickLoc" style="margin:0">Use my location</button>
+          <span class="hint" id="pickInfo" style="text-align:right">Tap the map where you'll be waiting</span>
         </div>
       </div>
+
       <label for="fTo">Going to</label>
       <div class="row">
         <div style="flex:1.6"><input id="fTo" type="text" placeholder="Glangwili Hospital"></div>
         <div><input id="fToPc" type="text" placeholder="SA31 2AF" style="text-transform:uppercase"></div>
       </div>
       <p class="hint" id="toPcInfo"></p>
+      <button type="button" class="btn small quiet" id="dropBtn" style="margin-top:8px">🏁 Set exact drop-off spot</button>
+      <div id="dropWrap" style="display:none;margin-top:10px">
+        <div id="dropMap" class="mapbox"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px">
+          <button type="button" class="btn small quiet" id="dropLoc" style="margin:0">Use my location</button>
+          <span class="hint" id="dropInfo" style="text-align:right">Tap the map where you're going</span>
+        </div>
+      </div>
+
       <div class="row">
         <div><label for="fDate">Date</label><input id="fDate" type="date"></div>
         <div><label for="fTime">Time</label><input id="fTime" type="time"></div>
       </div>
       <div class="row">
         <div><label for="fPax">Passengers</label>
-          <select id="fPax"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select>
-        </div>
+          <select id="fPax"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
         <div><label for="fReturn">Return pick-up <span style="font-weight:400">(optional)</span></label><input id="fReturn" type="time"></div>
       </div>
       <label for="fNotes">Anything else? <span style="font-weight:400">(optional)</span></label>
       <textarea id="fNotes" rows="2" placeholder="Wheelchair, child seat, luggage…"></textarea>
-      <p class="err" id="formErr">Fill in name, phone, both addresses, date and time.</p>
+      <div class="fare" id="fareHint"></div>
+      <p class="err" id="formErr"></p>
       <button class="btn" id="bookBtn">Request this ride</button>
-      <p class="note">Card payment is added at the next stage — for now you pay the driver.</p>
+      <p class="note">We'll text you a code to confirm your number the first time.</p>
       <p class="note"><a href="privacy.html" style="color:inherit">Privacy policy</a></p>
     </div>
   </section>
@@ -168,534 +87,208 @@ input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;bo
   <section id="tab-mine" style="display:none">
     <div class="card">
       <h2>My rides</h2>
-      <p class="sub">Rides booked with this phone number.</p>
-      <label for="trackPhone">Mobile number</label>
-      <input id="trackPhone" type="tel" placeholder="07700 900123">
+      <div id="mineAuth"></div>
       <div id="mineList"></div>
     </div>
   </section>
-
-  <section id="tab-driver" style="display:none">
-    <div class="card">
-<div class="card">
-      <h2>Alerts</h2>
-      <p class="sub">With this app open you'll hear a chime on every new booking. To get alerts even when it's closed, install the free <strong>ntfy</strong> app (App Store / Google Play), tap +, and subscribe to:</p>
-      <p style="font-family:ui-monospace,Menlo,monospace;font-size:15px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 12px;margin:0;word-break:break-all">towy-taxi-bbvca4h9pj</p>
-      <button class="btn quiet" id="alertsOn">Turn on alerts &amp; test sound</button>
-    </div>
-    <div class="card">
-      <h2>Bookings</h2>
-      <p class="sub">New requests first. Tap to respond.</p>
-      <div id="driverList"></div>
-    </div>
-    <div class="card">
-      <h2>Drivers</h2>
-      <p class="sub">Who can take rides. Ratings come from customers.</p>
-      <div id="driversList"></div>
-      <div class="row" style="margin-top:12px">
-        <div style="flex:1.2"><input id="dName" type="text" placeholder="Name"></div>
-        <div><input id="dCar" type="text" placeholder="Toyota Prius"></div>
-      </div>
-      <button class="btn quiet" id="dAdd" style="margin-top:10px">Add driver</button>
-    </div>
-  </section>
 </div>
 
-<div class="modal-bg" id="pinModal">
+<div class="modal-bg" id="phoneModal">
   <div class="modal">
-    <h3>Driver access</h3>
-    <p class="sub">Enter the driver PIN.</p>
-    <input id="pinInput" type="password" inputmode="numeric" maxlength="8" placeholder="PIN" autocomplete="off">
-    <p class="err" id="pinErr">Wrong PIN — try again.</p>
-    <button class="btn" id="pinSend">Unlock</button>
-    <button class="btn quiet" id="pinCancel" style="margin-top:8px">Back</button>
-  </div>
-</div>
-
-<div class="modal-bg" id="acceptModal">
-  <div class="modal">
-    <h3>Confirm this ride</h3>
-    <p class="sub">Pick who's driving and set the price — the customer sees both.</p>
-    <label for="accDriver">Driver</label>
-    <select id="accDriver"></select>
-    <label for="accPrice">Price, &pound; <span style="font-weight:400">(optional)</span></label>
-    <input id="accPrice" type="number" min="0" step="0.5" inputmode="decimal" placeholder="12.50">
-    <button class="btn" id="accSend">Confirm booking</button>
-    <button class="btn quiet" id="accCancel" style="margin-top:8px">Back</button>
-  </div>
-</div>
-
-<div class="modal-bg" id="declineModal">
-  <div class="modal">
-    <h3>Decline this ride</h3>
-    <p class="sub">The customer will see the reason.</p>
-    <button class="preset" data-r="Busy at that time">Busy at that time</button>
-    <button class="preset" data-r="Too far out of my area">Too far out of my area</button>
-    <button class="preset" data-r="Not working that day">Not working that day</button>
-    <label for="declineText">Or write your own</label>
-    <textarea id="declineText" rows="2" placeholder="I could do 10:30 if that works"></textarea>
-    <p class="err" id="declineErr">Pick a reason or write one.</p>
-    <button class="btn bad" id="declineSend">Decline and notify</button>
-    <button class="btn quiet" id="declineCancel" style="margin-top:8px">Back</button>
-  </div>
-</div>
-
-<div class="modal-bg" id="offerModal">
-  <div class="modal">
-    <h3>Offer another time</h3>
-    <p class="sub">The customer can accept it with one tap.</p>
-    <div class="row">
-      <div><label for="offerDate">Date</label><input id="offerDate" type="date"></div>
-      <div><label for="offerTime">Time</label><input id="offerTime" type="time"></div>
+    <div id="phStep1">
+      <h3>Confirm your number</h3>
+      <p class="sub">We'll send a 6-digit code by text message.</p>
+      <input id="phInput" type="tel" autocomplete="tel" placeholder="07700 900123">
+      <button class="btn" id="phSend">Send code</button>
     </div>
-    <label for="offerNote">Message <span style="font-weight:400">(optional)</span></label>
-    <input id="offerNote" type="text" placeholder="Sorry, 9:30 is taken — 10:30 free">
-    <p class="err" id="offerErr">Pick a date and time.</p>
-    <button class="btn" id="offerSend">Send offer</button>
-    <button class="btn quiet" id="offerCancel" style="margin-top:8px">Back</button>
+    <div id="phStep2" style="display:none">
+      <h3>Enter the code</h3>
+      <p class="sub" id="phSentTo">Sent by text message.</p>
+      <input id="phCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
+      <button class="btn" id="phConfirm">Confirm</button>
+      <button class="linkbtn" id="phResend" style="margin-top:12px">Didn't get it? Send again</button>
+    </div>
+    <p class="err" id="phErr"></p>
+    <button class="btn quiet" id="phCancel" style="margin-top:8px">Back</button>
+    <div id="recaptchaBox"></div>
   </div>
 </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="core.js"></script>
 <script>
 (function(){
 "use strict";
-var $=function(id){return document.getElementById(id)};
-var esc=function(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})};
-var bookings=[], db=null, isOwner=false, unsub=null, activeId=null;
+var $=TT.$, esc=TT.esc, F=TT.init("[DEFAULT]"), auth=F.auth, db=F.db;
+var user=null, mine=[], routes=[], unsubMine=null, prevStatus=null, pending=null, confirmation=null, verifier=null;
 
-var localStore={arr:[],listeners:[],
-  add:function(d){d.id="l"+Date.now()+Math.random().toString(36).slice(2,7);this.arr.push(d);this.emit()},
-  update:function(id,patch){for(var i=0;i<this.arr.length;i++){if(this.arr[i].id===id){for(var k in patch)this.arr[i][k]=patch[k]}}this.emit()},
-  emit:function(){var a=this.arr.slice();this.listeners.forEach(function(f){f(a)})},
-  sub:function(f){this.listeners.push(f);f(this.arr.slice())}};
-
-function savedPhone(){try{return localStorage.getItem("st_phone")||""}catch(e){return""}}
-function savePhone(p){try{localStorage.setItem("st_phone",p)}catch(e){}}
-
-function addBooking(d){
-  if(db){return db.collection("bookings").add(d).then(function(){},function(){localStore.add(d)})}
-  localStore.add(d);return Promise.resolve();
-}
-function updateBooking(id,patch){
-  if(db&&id.charAt(0)!=="l"){return db.doc("bookings/"+id).update(patch).then(function(){},function(){})}
-  localStore.update(id,patch);return Promise.resolve();
-}
-
-var drivers=[];
-function addDriver(d){
-  if(db){db.collection("drivers").add(d).then(function(){},function(){drivers.push(d);renderDrivers()})}
-  else{drivers.push(d);renderDrivers()}
-}
-function driverStats(name){
-  var rs=bookings.filter(function(b){return b.driverName===name&&b.rating});
-  if(!rs.length)return "";
-  var avg=rs.reduce(function(s,b){return s+b.rating},0)/rs.length;
-  return "\u2605 "+(Math.round(avg*10)/10)+" ("+rs.length+")";
-}
-function renderDrivers(){
-  var el=$("driversList");if(!el)return;
-  if(!drivers.length){el.innerHTML='<p class="empty">No drivers yet — add yourself first.</p>';return}
-  el.innerHTML=drivers.map(function(d){
-    return '<div class="ride"><div class="top"><span class="when">'+esc(d.name)+'</span><span class="chip s-done">'+(driverStats(d.name)||"no ratings yet")+'</span></div>'+(d.car?'<p class="meta">'+esc(d.car)+'</p>':'')+'</div>';
-  }).join("");
-}
-
-function fmtWhen(b){
-  var d=b.date?new Date(b.date+"T00:00:00"):null;
-  var ds=d&&!isNaN(d)?d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"}):esc(b.date);
-  return ds+", "+esc(b.time);
-}
-var CHIP={new:["s-new","Waiting for confirmation"],priced:["s-counter","Price offered"],confirmed:["s-confirmed","Confirmed"],
-  declined:["s-declined","Declined"],counter:["s-counter","New time offered"],
-  cancelled:["s-cancelled","Cancelled"],done:["s-done","Completed"]};
-function chip(st){var c=CHIP[st]||["s-done",esc(st)];return '<span class="chip '+c[0]+'">'+c[1]+'</span>'}
-
-function renderMine(){
-  var raw=$("trackPhone").value||"";
-  var phone=(normPhone(raw)||raw).replace(/\s+/g,"");
-  var mine=bookings.filter(function(b){return (b.phone||"").replace(/\s+/g,"")===phone&&phone});
-  mine.sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)});
-  var open=mine.filter(function(b){return b.status==="new"||b.status==="counter"||b.status==="priced"}).length;
-  $("mineCount").style.display=open?"":"none";$("mineCount").textContent=open;
-  if(!phone){$("mineList").innerHTML='<p class="empty">Enter your number to see your rides.</p>';return}
-  if(!mine.length){$("mineList").innerHTML='<p class="empty">No rides for this number yet.</p>';return}
-  $("mineList").innerHTML=mine.map(function(b){
-    var h='<div class="ride"><div class="top"><span class="when">'+fmtWhen(b)+'</span>'+chip(b.status)+'</div>';
-    h+='<p class="route">'+esc(b.from)+(b.fromPc?', '+esc(b.fromPc):'')+' &rarr; '+esc(b.to)+(b.toPc?', '+esc(b.toPc):'')+'</p>';
-    h+='<p class="meta">'+(b.ref?esc(b.ref)+' &middot; ':'')+esc(b.pax||"1")+' passenger'+((b.pax||"1")==="1"?"":"s")+(b.returnTime?' &middot; return '+esc(b.returnTime):'')+'</p>';
-    if(b.status==="new"){h+='<button class="btn small bad" data-act="cancel" data-id="'+b.id+'">Cancel request</button>'}
-    if((b.status==="priced"||b.status==="confirmed"||b.status==="done")&&(b.driverName||typeof b.price==="number")){
-      h+='<div class="reason">'+(b.driverName?'Your driver: <strong>'+esc(b.driverName)+'</strong>'+(b.driverCar?' &middot; '+esc(b.driverCar):''):'')+(typeof b.price==="number"?((b.driverName?' &middot; ':'')+'&pound;'+b.price.toFixed(2)):'')+'</div>';
-    }
-    if(b.status==="priced"){
-      h+='<button class="btn small ok" data-act="acceptPrice" data-id="'+b.id+'">OK — book it</button>';
-      h+='<button class="btn small bad" data-act="cancel" data-id="'+b.id+'">No thanks</button>';
-    }
-    if(b.status==="done"){
-      if(b.rating){h+='<p class="meta stars-done">'+"\u2605".repeat(b.rating)+"\u2606".repeat(5-b.rating)+' — thanks for rating!</p>'}
-      else{h+='<p class="meta" style="margin-top:8px">How was your ride?</p><div>'+[1,2,3,4,5].map(function(v){return '<button class="star" data-act="rate" data-val="'+v+'" data-id="'+b.id+'" aria-label="Rate '+v+'">\u2605</button>'}).join("")+'</div>'}
-    }
-    if(b.status==="declined"&&(b.reason||b.comment)){h+='<div class="reason">Driver: '+esc(b.reason||"")+(b.comment?(b.reason?" — ":"")+esc(b.comment):"")+'</div>'}
-    if(b.status==="counter"){
-      h+='<div class="reason">Driver offers <strong>'+esc(b.offerDate?fmtWhen({date:b.offerDate,time:b.offerTime}):b.offerTime)+'</strong>'+(b.offerNote?' — '+esc(b.offerNote):'')+'</div>';
-      h+='<button class="btn small ok" data-act="acceptOffer" data-id="'+b.id+'">Accept new time</button>';
-      h+='<button class="btn small bad" data-act="cancel" data-id="'+b.id+'">Cancel ride</button>';
-    }
-    return h+'</div>';
-  }).join("");
-}
-
-function renderDriver(){
-  var order={new:0,priced:1,counter:2,confirmed:3,done:4,declined:5,cancelled:6};
-  var list=bookings.slice().sort(function(a,b){
-    var d=(order[a.status]||9)-(order[b.status]||9);
-    if(d)return d;
-    return String(a.date+a.time).localeCompare(String(b.date+b.time));
-  });
-  var fresh=bookings.filter(function(b){return b.status==="new"}).length;
-  $("newCount").style.display=fresh?"":"none";$("newCount").textContent=fresh;
-  if(!list.length){$("driverList").innerHTML='<p class="empty">No bookings yet. Share the link and they\'ll appear here live.</p>';return}
-  $("driverList").innerHTML=list.map(function(b){
-    var h='<div class="ride"><div class="top"><span class="when">'+fmtWhen(b)+'</span>'+chip(b.status)+'</div>';
-    h+='<p class="route">'+esc(b.from)+(b.fromPc?', '+esc(b.fromPc):'')+' &rarr; '+esc(b.to)+(b.toPc?', '+esc(b.toPc):'')+'</p>';
-    var navTo=b.pickLat?(b.pickLat+","+b.pickLng):(b.from+(b.fromPc?", "+b.fromPc:""));
-    h+='<p class="meta"><a href="https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(navTo)+'" target="_blank" rel="noopener" style="color:var(--offer);text-decoration:none">📍 '+(b.pickLat?'Navigate to exact pin':'Navigate to address')+'</a></p>';
-    h+='<p class="meta">'+(b.ref?esc(b.ref)+' &middot; ':'')+esc(b.name)+' &middot; '+esc(b.phone)+(b.pax?' &middot; '+esc(b.pax)+' pax':'')+(b.returnTime?' &middot; return '+esc(b.returnTime):'')+(b.notes?' &middot; '+esc(b.notes):'')+'</p>';
-    if(b.driverName||typeof b.price==="number"||b.rating){h+='<p class="meta">'+(b.driverName?esc(b.driverName)+(b.driverCar?' ('+esc(b.driverCar)+')':''):'')+(typeof b.price==="number"?((b.driverName?' &middot; ':'')+'&pound;'+b.price.toFixed(2)):'')+(b.rating?' &middot; rated '+b.rating+'/5 \u2605':'')+'</p>'}
-    if(b.status==="new"){
-      h+='<button class="btn small ok" data-act="accept" data-id="'+b.id+'">Accept</button>';
-      h+='<button class="btn small quiet" data-act="offer" data-id="'+b.id+'">Offer another time</button>';
-      h+='<button class="btn small bad" data-act="decline" data-id="'+b.id+'">Decline</button>';
-    }
-    if(b.status==="priced"){h+='<p class="meta">Waiting for the customer to accept the price.</p>'}
-    if(b.status==="counter"){h+='<p class="meta">Offered '+esc(b.offerDate||"")+' '+esc(b.offerTime||"")+' — waiting for the customer.</p>'}
-    if(b.status==="confirmed"){h+='<button class="btn small quiet" data-act="done" data-id="'+b.id+'">Mark completed</button>'}
-    if(b.status==="declined"&&(b.reason||b.comment)){h+='<div class="reason">'+esc(b.reason||"")+(b.comment?(b.reason?" — ":"")+esc(b.comment):"")+'</div>'}
-    h+=contactButtons(b);
-    return h+'</div>';
-  }).join("");
-}
-
-var NTFY_TOPIC="towy-taxi-bbvca4h9pj";
-var APP_URL="https://iramazur1991.github.io/towy_taxi/";
-var actx=null;
-function unlockAudio(){try{if(!actx){var C=window.AudioContext||window.webkitAudioContext;if(C)actx=new C()}if(actx&&actx.state==="suspended")actx.resume()}catch(e){}}
-document.addEventListener("click",unlockAudio,{once:false,passive:true});
-document.addEventListener("touchstart",unlockAudio,{once:false,passive:true});
-function beep(){try{unlockAudio();if(!actx)return;[0,0.25].forEach(function(t){var o=actx.createOscillator(),g=actx.createGain();o.type="sine";o.frequency.value=t?1175:880;var s=actx.currentTime+t;g.gain.setValueAtTime(0.3,s);g.gain.exponentialRampToValueAtTime(0.001,s+0.35);o.connect(g);g.connect(actx.destination);o.start(s);o.stop(s+0.36)})}catch(e){}}
-function alertUser(title,body){
-  beep();
-  try{if(navigator.vibrate)navigator.vibrate([200,100,200])}catch(e){}
-  try{if(window.Notification&&Notification.permission==="granted"&&navigator.serviceWorker){
-    navigator.serviceWorker.ready.then(function(r){r.showNotification(title,{body:body,icon:(MODE==="driver"?"driver-icon-192.png":"icon-192.png"),tag:"towy-"+Date.now()})}).catch(function(){})}}catch(e){}
-  var t=document.title;document.title="\u25CF "+title;setTimeout(function(){document.title=t},6000);
-}
-function askNotify(){try{if(window.Notification&&Notification.permission==="default")Notification.requestPermission()}catch(e){}}
-function notifyDriver(b){
-  try{fetch("https://ntfy.sh/",{method:"POST",body:JSON.stringify({topic:NTFY_TOPIC,title:"TOWY TAXI — new booking",
-    message:(b.ref||"")+" · "+b.date+" "+b.time+" · open TOWY Driver to respond",tags:["taxi"],priority:4,click:APP_URL+"driver.html"})}).catch(function(){})}catch(e){}
-}
-var prevStatus=null;
-function watchChanges(){
-  var cur={};bookings.forEach(function(b){cur[b.id]=b.status});
-  if(prevStatus){
-    if(MODE==="driver"){
-      bookings.forEach(function(b){
-        var was=prevStatus[b.id];
-        if(!was&&b.status==="new")alertUser("New booking "+(b.ref||""),fmtWhen(b)+" · "+b.from+" → "+b.to);
-        else if(was&&was!==b.status){
-          if(b.status==="confirmed"&&(was==="priced"||was==="counter"))alertUser("Customer accepted "+(b.ref||""),fmtWhen(b)+" · "+b.name);
-          if(b.status==="cancelled")alertUser("Customer cancelled "+(b.ref||""),fmtWhen(b)+" · "+b.name);
-        }
-      });
-    }else{
-      var raw=$("trackPhone").value||"",ph=(normPhone(raw)||raw).replace(/\s+/g,"");
-      bookings.forEach(function(b){
-        var was=prevStatus[b.id];
-        if(!was||was===b.status||!ph||(b.phone||"").replace(/\s+/g,"")!==ph)return;
-        var msg={priced:"Price offered: £"+(typeof b.price==="number"?b.price.toFixed(2):"")+" — tap OK to book",
-          confirmed:"Your ride is confirmed"+(b.driverName?" · driver "+b.driverName:""),
-          declined:"Sorry, the driver can't take this ride"+(b.reason?" — "+b.reason:""),
-          counter:"The driver offered another time"}[b.status];
-        if(msg)alertUser("TOWY TAXI "+(b.ref||""),msg+" · "+fmtWhen(b));
-      });
-    }
-  }
-  prevStatus=cur;
-}
-function msgFor(b){
-  var w=fmtWhen(b),r=b.ref?b.ref+" ":"";
-  if(b.status==="priced")return "TOWY TAXI: your ride "+r+"on "+w+" — price £"+(typeof b.price==="number"?b.price.toFixed(2):"?")+(b.driverName?", driver "+b.driverName:"")+". Please tap OK in the app to book: "+APP_URL;
-  if(b.status==="confirmed")return "TOWY TAXI: your ride "+r+"on "+w+" is confirmed."+(b.driverName?" Driver: "+b.driverName+(b.driverCar?" ("+b.driverCar+")":"")+".":"")+(typeof b.price==="number"?" Price £"+b.price.toFixed(2)+".":"")+" See you then!";
-  if(b.status==="declined")return "TOWY TAXI: sorry, we can't take your ride "+r+"on "+w+"."+(b.reason?" "+b.reason+".":"")+(b.comment?" "+b.comment:"");
-  if(b.status==="counter")return "TOWY TAXI: we can't do "+w+", but can offer "+fmtWhen({date:b.offerDate,time:b.offerTime})+"."+(b.offerNote?" "+b.offerNote:"")+" Tap accept in the app: "+APP_URL;
-  return "";
-}
-function contactButtons(b){
-  var m=msgFor(b);if(!m)return "";
-  var p=String(b.phone||"").replace(/\s+/g,""),intl=p.charAt(0)==="0"?"44"+p.slice(1):p.replace(/^\+/,"");
-  var t=encodeURIComponent(m);
-  return '<a class="btn small quiet" style="text-decoration:none" href="sms:'+p+'?&body='+t+'">\uD83D\uDCAC SMS customer</a>'+
-         '<a class="btn small quiet" style="text-decoration:none" href="https://wa.me/'+intl+'?text='+t+'" target="_blank" rel="noopener">WhatsApp</a>';
-}
-
-
-var map=null,pin=null,pinLL=null,DEFAULT_LL=[51.8576,-4.3121];
-function lookupPc(pc){
-  return fetch("https://api.postcodes.io/postcodes/"+encodeURIComponent(pc)).then(function(r){return r.json()})
-    .then(function(j){return (j&&j.status===200&&j.result)?j.result:null}).catch(function(){return undefined});
-}
-function pcCheck(inputId,infoId){
-  var el=$(inputId),info=$(infoId);if(!el||!info)return;
-  el.addEventListener("blur",function(){
-    var pc=normPc(el.value);info.className="hint";info.textContent="";
-    if(!pc)return;
-    el.value=pc;
-    lookupPc(pc).then(function(r){
-      if(r===undefined)return;
-      if(!r){info.className="hint badc";info.textContent="\u2717 Postcode not found — please check it";return}
-      info.className="hint okc";
-      info.textContent="\u2713 "+[r.parish||r.admin_ward,r.admin_district].filter(function(x,i,a){return x&&a.indexOf(x)===i}).join(", ");
-    });
-  });
-}
-pcCheck("fFromPc","fromPcInfo");pcCheck("fToPc","toPcInfo");
-function setPin(ll){
-  var lat=ll.lat!==undefined?ll.lat:ll[0],lng=ll.lng!==undefined?ll.lng:ll[1];
-  if(!pin){pin=L.circleMarker([lat,lng],{radius:11,color:"#17150F",weight:3,fillColor:"#F2B417",fillOpacity:1}).addTo(map)}
-  else pin.setLatLng([lat,lng]);
-  pinLL={lat:Math.round(lat*1e6)/1e6,lng:Math.round(lng*1e6)/1e6};
-  $("pinInfo").className="hint okc";$("pinInfo").textContent="\u2713 Pin set — tap again to move it";
-  $("pinBtn").textContent="📍 Pick-up spot set \u2713 (tap to change)";
-}
-function openMap(){
-  $("mapWrap").style.display="";
-  if(!map){
-    if(!window.L){$("pinInfo").textContent="Map couldn't load — add directions in the notes";return}
-    map=L.map("map",{zoomControl:true}).setView(DEFAULT_LL,13);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap"}).addTo(map);
-    map.on("click",function(e){setPin(e.latlng)});
-  }
-  setTimeout(function(){map.invalidateSize();
-    if(pinLL){map.setView([pinLL.lat,pinLL.lng],17);return}
-    var pc=normPc($("fFromPc").value);
-    if(pc){lookupPc(pc).then(function(r){if(r)map.setView([r.latitude,r.longitude],17)})}
-  },60);
-}
-if($("pinBtn")){
-  $("pinBtn").addEventListener("click",openMap);
-  $("locBtn").addEventListener("click",function(){
-    if(!navigator.geolocation){$("pinInfo").textContent="Location not available — tap the map";return}
-    $("pinInfo").className="hint";$("pinInfo").textContent="Finding you…";
-    navigator.geolocation.getCurrentPosition(function(p){
-      var ll=[p.coords.latitude,p.coords.longitude];map.setView(ll,17);setPin(ll);
-    },function(){$("pinInfo").className="hint badc";$("pinInfo").textContent="Couldn't get your location — tap the map instead"},
-    {enableHighAccuracy:true,timeout:10000,maximumAge:60000});
-  });
-}
-function resetPin(){pinLL=null;if(pin&&map){map.removeLayer(pin)}pin=null;
-  if($("pinBtn")){$("pinBtn").textContent="📍 Set exact pick-up spot on map";$("mapWrap").style.display="none";
-  $("pinInfo").className="hint";$("pinInfo").textContent="Tap the map where you'll be waiting"}}
-
-function renderAll(){renderMine();renderDriver();renderDrivers()}
-
-var DRIVER_PIN="";
-function driverUnlocked(){try{return localStorage.getItem("tt_driver")==="1"}catch(e){return false}}
 function switchTab(tab){
   document.querySelectorAll("#nav button").forEach(function(b){b.classList.toggle("on",b.dataset.tab===tab)});
-  ["book","mine","driver"].forEach(function(t){$("tab-"+t).style.display=tab===t?"":"none"});
+  $("tab-book").style.display=tab==="book"?"":"none"; $("tab-mine").style.display=tab==="mine"?"":"none";
 }
-document.querySelectorAll("#nav button").forEach(function(btn){
-  btn.addEventListener("click",function(){
-    if(btn.dataset.tab==="driver"&&!driverUnlocked()){
-      $("pinInput").value="";$("pinErr").style.display="none";openModal("pinModal");return;
-    }
-    switchTab(btn.dataset.tab);
-  });
-});
-$("pinCancel").addEventListener("click",function(){closeModal("pinModal")});
-$("pinSend").addEventListener("click",function(){
-  if($("pinInput").value===DRIVER_PIN){
-    try{localStorage.setItem("tt_driver","1")}catch(e){}
-    closeModal("pinModal");switchTab("driver");
-  }else{$("pinErr").style.display="block"}
-});
-$("pinInput").addEventListener("input",function(){$("pinErr").style.display="none"});
-$("alertsOn").addEventListener("click",function(){askNotify();beep();try{if(navigator.vibrate)navigator.vibrate(150)}catch(e){}});
+document.querySelectorAll("#nav button").forEach(function(b){b.addEventListener("click",function(){switchTab(b.dataset.tab)})});
 
-var MODE=document.documentElement.getAttribute("data-mode")==="driver"?"driver":"client";
-if(MODE==="client"){
-  $("driverTab").style.display="none";
-}else{
-  $("nav").style.display="none";
-  $("pinCancel").style.display="none";
-  document.querySelector(".brand span").textContent="Driver panel";
-  switchTab("driver");
-  if(!driverUnlocked()){
-    $("tab-driver").style.display="none";
-    $("pinInput").value="";openModal("pinModal");
+var pick=TT.picker({btn:"pickBtn",wrap:"pickWrap",map:"pickMap",info:"pickInfo",loc:"pickLoc",pc:"fFromPc",fill:"#F2B417",setLabel:"📍 Pick-up spot set ✓ (tap to change)"});
+var drop=TT.picker({btn:"dropBtn",wrap:"dropWrap",map:"dropMap",info:"dropInfo",loc:"dropLoc",pc:"fToPc",fill:"#FFFFFF",setLabel:"🏁 Drop-off spot set ✓ (tap to change)"});
+TT.pcCheck("fFromPc","fromPcInfo",updateFare); TT.pcCheck("fToPc","toPcInfo",updateFare);
+
+/* Fare estimate from the public fare table */
+db.collection("routes").onSnapshot(function(s){routes=s.docs.map(function(d){return d.data()});updateFare()},function(){});
+function updateFare(){
+  var f=TT.findFare(routes,{from:$("fFrom").value,fromPc:$("fFromPc").value,to:$("fTo").value,toPc:$("fToPc").value});
+  var el=$("fareHint");
+  if(f!=null){el.style.display="block";el.textContent="Usual fare for this trip: "+TT.money(f)+" — the driver confirms the final price."}
+  else el.style.display="none";
+  return f;
+}
+["fFrom","fTo"].forEach(function(id){$(id).addEventListener("input",updateFare)});
+
+/* Prefill */
+var today=new Date().toISOString().slice(0,10); $("fDate").value=today; $("fDate").min=today;
+try{var pr=JSON.parse(localStorage.getItem("tt_profile")||"null");
+  if(pr){$("fName").value=pr.name||"";$("fPhone").value=pr.phone||"";$("fFrom").value=pr.from||"";$("fFromPc").value=pr.fromPc||""}}catch(e){}
+
+/* Auth state */
+auth.onAuthStateChanged(function(u){
+  user=u;
+  if(u&&u.phoneNumber&&!$("fPhone").value)$("fPhone").value=TT.normPhone(u.phoneNumber)||"";
+  if(unsubMine){unsubMine();unsubMine=null} mine=[];prevStatus=null;
+  if(u){
+    unsubMine=db.collection("bookings").where("uid","==",u.uid).onSnapshot(function(s){
+      mine=s.docs.map(function(d){var v=Object.assign({},d.data());v.id=d.id;return v});
+      renderMine();watch();
+    },function(){renderMine()});
   }
-}
+  renderMine();
+});
 
-function normPhone(p){
-  p=String(p||"").replace(/[\s\-().]/g,"");
-  if(/^\+447\d{9}$/.test(p))p="0"+p.slice(3);
-  if(/^447\d{9}$/.test(p))p="0"+p.slice(2);
-  if(!/^07\d{9}$/.test(p))return null;
-  return p.slice(0,5)+" "+p.slice(5);
-}
-function normPc(s){
-  s=String(s||"").trim().toUpperCase().replace(/\s+/g,"");
-  if(!s)return "";
-  if(!/^[A-Z]{1,2}\d[A-Z\d]?\d[A-Z]{2}$/.test(s))return null;
-  return s.slice(0,s.length-3)+" "+s.slice(-3);
-}
 function showErr(m){var e=$("formErr");e.textContent=m;e.style.display="block"}
-function makeRef(){var c="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r="";for(var i=0;i<4;i++)r+=c.charAt(Math.floor(Math.random()*c.length));return "TT-"+r}
+["fName","fPhone","fFrom","fFromPc","fTo","fToPc","fDate","fTime"].forEach(function(id){$(id).addEventListener("input",function(){$("formErr").style.display="none"})});
 
-$("bookBtn").addEventListener("click",function(){
-  var name=$("fName").value.trim(),from=$("fFrom").value.trim(),to=$("fTo").value.trim(),
-      date=$("fDate").value,time=$("fTime").value;
-  if(!name||!$("fPhone").value.trim()||!from||!to||!date||!time){showErr("Fill in name, phone, both addresses, date and time.");return}
-  var phone=normPhone($("fPhone").value);
-  if(!phone){showErr("Check the mobile number — UK format like 07700 900123.");return}
-  var fromPc=normPc($("fFromPc").value);
-  if(fromPc===null){showErr("Check the pick-up postcode — like SA31 1BH.");return}
-  var toPc=normPc($("fToPc").value);
-  if(toPc===null){showErr("Check the destination postcode — like SA31 2AF.");return}
-  var when=new Date(date+"T"+time);
-  if(isNaN(when.getTime())||when.getTime()<Date.now()+30*60000){showErr("Pick a time at least 30 minutes from now.");return}
-  $("formErr").style.display="none";
-  var b={ref:makeRef(),name:name,phone:phone,from:from,fromPc:fromPc,to:to,toPc:toPc,
-    date:date,time:time,pax:$("fPax").value,returnTime:$("fReturn").value,
-    notes:$("fNotes").value.trim(),status:"new",createdAt:Date.now()};
-  if(pinLL){b.pickLat=pinLL.lat;b.pickLng=pinLL.lng}
-  askNotify();
-  addBooking(b).then(function(){
-    notifyDriver(b);
-    savePhone(phone);
-    try{localStorage.setItem("tt_profile",JSON.stringify({name:name,from:from,fromPc:fromPc}))}catch(e){}
-    $("trackPhone").value=phone;$("fPhone").value=phone;
-    $("fTo").value="";$("fToPc").value="";resetPin();if($("toPcInfo"))$("toPcInfo").textContent="";$("fNotes").value="";$("fTime").value="";$("fReturn").value="";
-    document.querySelector('#nav button[data-tab="mine"]').click();
-  });
-});
-["fName","fPhone","fFrom","fFromPc","fTo","fToPc","fDate","fTime"].forEach(function(id){
-  $(id).addEventListener("input",function(){$("formErr").style.display="none"});
-});
-$("trackPhone").addEventListener("input",renderMine);
+function collect(){
+  var name=$("fName").value.trim(),from=$("fFrom").value.trim(),to=$("fTo").value.trim(),date=$("fDate").value,time=$("fTime").value;
+  if(!name||!$("fPhone").value.trim()||!from||!to||!date||!time){showErr("Fill in name, phone, both addresses, date and time.");return null}
+  var phone=TT.normPhone($("fPhone").value); if(!phone){showErr("Check the mobile number — UK format like 07700 900123.");return null}
+  var fromPc=TT.normPc($("fFromPc").value); if(fromPc===null){showErr("Check the pick-up postcode — like SA31 1BH.");return null}
+  var toPc=TT.normPc($("fToPc").value); if(toPc===null){showErr("Check the destination postcode — like SA31 2AF.");return null}
+  var when=new Date(date+"T"+time); if(isNaN(when.getTime())||when.getTime()<Date.now()+30*60000){showErr("Pick a time at least 30 minutes from now.");return null}
+  var b={ref:TT.makeRef(),name:name,phone:phone,from:from,fromPc:fromPc,to:to,toPc:toPc,date:date,time:time,
+    pax:$("fPax").value,returnTime:$("fReturn").value,notes:$("fNotes").value.trim(),status:"new"};
+  var p=pick.get(),d=drop.get(); if(p){b.pickLat=p.lat;b.pickLng=p.lng} if(d){b.dropLat=d.lat;b.dropLng=d.lng}
+  var f=updateFare(); if(f!=null)b.estPrice=f;
+  return b;
+}
+function submit(b){
+  var u=auth.currentUser; if(!u){pending=b;openPhone(b.phone);return}
+  b.uid=u.uid; b.createdAt=Date.now();
+  $("bookBtn").disabled=true;
+  db.collection("bookings").add(b).then(function(){
+    TT.notifyDriver(b);
+    try{localStorage.setItem("tt_profile",JSON.stringify({name:b.name,phone:b.phone,from:b.from,fromPc:b.fromPc}))}catch(e){}
+    $("fTo").value="";$("fToPc").value="";$("fNotes").value="";$("fTime").value="";$("fReturn").value="";$("toPcInfo").textContent="";
+    pick.reset();drop.reset();updateFare();switchTab("mine");
+  }).catch(function(){showErr("Couldn't send the booking — please try again.")}).then(function(){$("bookBtn").disabled=false});
+}
+$("bookBtn").addEventListener("click",function(){var b=collect();if(!b)return;$("formErr").style.display="none";TT.askNotify();submit(b)});
 
-function openModal(id){$(id).classList.add("open")}
-function closeModal(id){$(id).classList.remove("open")}
-var pickedReason="";
-document.querySelectorAll("#declineModal .preset").forEach(function(p){
-  p.addEventListener("click",function(){
-    pickedReason=p.dataset.r;
-    document.querySelectorAll("#declineModal .preset").forEach(function(x){x.classList.remove("sel")});
-    p.classList.add("sel");$("declineErr").style.display="none";
-  });
+/* Phone sign-in (SMS) with anonymous fallback if SMS isn't enabled yet */
+function phErr(m){$("phErr").textContent=m;$("phErr").style.display=m?"block":"none"}
+function openPhone(phone){
+  $("phInput").value=phone||$("fPhone").value||"";$("phCode").value="";
+  $("phStep1").style.display="";$("phStep2").style.display="none";phErr("");TT.openModal("phoneModal");
+}
+function freshVerifier(){
+  try{if(verifier)verifier.clear()}catch(e){}
+  $("recaptchaBox").innerHTML='<div id="rc'+Date.now()+'"></div>';
+  verifier=new firebase.auth.RecaptchaVerifier($("recaptchaBox").firstChild,{size:"invisible"},F.app);
+  return verifier;
+}
+var FALLBACK=["auth/billing-not-enabled","auth/operation-not-allowed","auth/invalid-app-credential","auth/unauthorized-domain","auth/internal-error"];
+function afterSignIn(){TT.closeModal("phoneModal");if(pending){var b=pending;pending=null;submit(b)}}
+function sendCode(){
+  var e164=TT.toE164($("phInput").value); if(!e164){phErr("Check the number — like 07700 900123.");return}
+  phErr("");$("phSend").disabled=true;$("phSend").textContent="Sending…";
+  auth.signInWithPhoneNumber(e164,freshVerifier()).then(function(cr){
+    confirmation=cr;$("phSentTo").textContent="Sent to "+TT.normPhone(e164)+".";
+    $("phStep1").style.display="none";$("phStep2").style.display="";
+    setTimeout(function(){$("phCode").focus()},50);
+  }).catch(function(err){
+    if(err&&FALLBACK.indexOf(err.code)>=0){
+      auth.signInAnonymously().then(afterSignIn).catch(function(){phErr("Sign-in isn't available right now — please call us.")});
+    }else if(err&&err.code==="auth/too-many-requests"){phErr("Too many attempts — please wait a few minutes.")}
+    else if(err&&err.code==="auth/invalid-phone-number"){phErr("That number doesn't look right.")}
+    else phErr("Couldn't send the code — please try again.");
+  }).then(function(){$("phSend").disabled=false;$("phSend").textContent="Send code"});
+}
+$("phSend").addEventListener("click",sendCode);
+$("phResend").addEventListener("click",function(){$("phStep1").style.display="";$("phStep2").style.display="none";phErr("")});
+$("phConfirm").addEventListener("click",function(){
+  var c=$("phCode").value.trim(); if(!/^\d{6}$/.test(c)){phErr("Enter the 6-digit code.");return}
+  if(!confirmation)return; $("phConfirm").disabled=true;
+  confirmation.confirm(c).then(afterSignIn).catch(function(){phErr("Wrong or expired code — try again.")}).then(function(){$("phConfirm").disabled=false});
 });
-$("declineCancel").addEventListener("click",function(){closeModal("declineModal")});
-$("offerCancel").addEventListener("click",function(){closeModal("offerModal")});
-$("accCancel").addEventListener("click",function(){closeModal("acceptModal")});
-$("accSend").addEventListener("click",function(){
-  var i=$("accDriver").value,d=(i!==""&&drivers[i])?drivers[i]:null;
-  var p=parseFloat($("accPrice").value);
-  var patch={};
-  if(d){patch.driverName=d.name;patch.driverCar=d.car||""}
-  if(!isNaN(p)&&p>0){patch.price=Math.round(p*100)/100;patch.status="priced"}
-  else{patch.status="confirmed"}
-  updateBooking(activeId,patch);
-  closeModal("acceptModal");
-});
-$("dAdd").addEventListener("click",function(){
-  var n=$("dName").value.trim();if(!n)return;
-  addDriver({name:n,car:$("dCar").value.trim()});
-  $("dName").value="";$("dCar").value="";
-});
-$("declineSend").addEventListener("click",function(){
-  var txt=$("declineText").value.trim();
-  if(!pickedReason&&!txt){$("declineErr").style.display="block";return}
-  updateBooking(activeId,{status:"declined",reason:pickedReason,comment:txt});
-  closeModal("declineModal");
-});
-$("offerSend").addEventListener("click",function(){
-  var d=$("offerDate").value,t=$("offerTime").value;
-  if(!d||!t){$("offerErr").style.display="block";return}
-  updateBooking(activeId,{status:"counter",offerDate:d,offerTime:t,offerNote:$("offerNote").value.trim()});
-  closeModal("offerModal");
-});
-$("offerDate").addEventListener("input",function(){$("offerErr").style.display="none"});
-$("offerTime").addEventListener("input",function(){$("offerErr").style.display="none"});
-$("declineText").addEventListener("input",function(){$("declineErr").style.display="none"});
+$("phCancel").addEventListener("click",function(){pending=null;TT.closeModal("phoneModal")});
 
+/* My rides */
+function renderMine(){
+  if(!user){
+    $("mineAuth").innerHTML='<p class="sub">Sign in with your mobile number to see your rides.</p><button class="btn" id="mineSignIn">Sign in with my number</button>';
+    $("mineSignIn").addEventListener("click",function(){openPhone()});
+    $("mineList").innerHTML="";$("mineCount").style.display="none";return;
+  }
+  var who=user.phoneNumber?TT.normPhone(user.phoneNumber):"this device";
+  $("mineAuth").innerHTML='<div class="who"><span>Signed in: '+esc(who)+'</span><button class="linkbtn" id="signOut">Sign out</button></div>';
+  $("signOut").addEventListener("click",function(){auth.signOut()});
+  var list=mine.slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)});
+  var open=list.filter(function(b){return b.status==="priced"||b.status==="counter"}).length;
+  $("mineCount").style.display=open?"":"none";$("mineCount").textContent=open;
+  if(!list.length){$("mineList").innerHTML='<p class="empty">No rides yet — book one and it will appear here.</p>';return}
+  $("mineList").innerHTML=list.map(function(b){
+    var h='<div class="ride"><div class="top"><span class="when">'+esc(TT.fmtWhen(b))+'</span>'+TT.chip(b.status)+'</div>';
+    h+='<p class="route">'+esc(b.from)+(b.fromPc?', '+esc(b.fromPc):'')+' &rarr; '+esc(b.to)+(b.toPc?', '+esc(b.toPc):'')+'</p>';
+    h+='<p class="meta">'+esc(b.ref||"")+' &middot; '+esc(b.pax||"1")+' passenger'+((b.pax||"1")==="1"?"":"s")+(b.returnTime?' &middot; return '+esc(b.returnTime):'')+(b.estPrice!=null&&typeof b.price!=="number"?' &middot; usual fare '+TT.money(b.estPrice):'')+'</p>';
+    if(["priced","confirmed","done"].indexOf(b.status)>=0&&(b.driverName||typeof b.price==="number"))
+      h+='<div class="reason">'+(b.driverName?'Your driver: <strong>'+esc(b.driverName)+'</strong>'+(b.driverCar?' &middot; '+esc(b.driverCar):''):'')+(typeof b.price==="number"?(b.driverName?' &middot; ':'')+TT.money(b.price):'')+'</div>';
+    if(b.status==="priced")h+='<button class="btn small ok" data-act="acceptPrice" data-id="'+b.id+'">OK — book it</button><button class="btn small bad" data-act="cancel" data-id="'+b.id+'">No thanks</button>';
+    if(b.status==="counter"){
+      h+='<div class="reason">Driver offers <strong>'+esc(TT.fmtWhen({date:b.offerDate,time:b.offerTime}))+'</strong>'+(b.offerNote?' — '+esc(b.offerNote):'')+'</div>';
+      h+='<button class="btn small ok" data-act="acceptOffer" data-id="'+b.id+'">Accept new time</button><button class="btn small bad" data-act="cancel" data-id="'+b.id+'">Cancel ride</button>';
+    }
+    if(b.status==="new")h+='<button class="btn small bad" data-act="cancel" data-id="'+b.id+'">Cancel request</button>';
+    if(b.status==="confirmed")h+='<button class="btn small bad" data-act="cancel" data-id="'+b.id+'">Cancel ride</button>';
+    if(b.status==="declined"&&(b.reason||b.comment))h+='<div class="reason">Driver: '+esc(b.reason||"")+(b.comment?(b.reason?" — ":"")+esc(b.comment):"")+'</div>';
+    if(b.status==="done"){
+      if(b.rating)h+='<p class="meta stars-done">'+"\u2605".repeat(b.rating)+"\u2606".repeat(5-b.rating)+' — thanks for rating!</p>';
+      else h+='<p class="meta" style="margin-top:8px">How was your ride?</p><div>'+[1,2,3,4,5].map(function(v){return '<button class="star" data-act="rate" data-val="'+v+'" data-id="'+b.id+'" aria-label="Rate '+v+'">\u2605</button>'}).join("")+'</div>';
+    }
+    return h+'</div>';
+  }).join("");
+}
 document.body.addEventListener("click",function(e){
   var t=e.target.closest("[data-act]");if(!t)return;
-  var id=t.dataset.id, b=null;
-  for(var i=0;i<bookings.length;i++){if(bookings[i].id===id)b=bookings[i]}
-  if(!b)return;
-  activeId=id;
-  var act=t.dataset.act;
-  if(act==="accept"){
-    var sel=$("accDriver");sel.innerHTML="";
-    if(drivers.length){drivers.forEach(function(d,i){var o=document.createElement("option");o.value=i;o.textContent=d.name+(d.car?" — "+d.car:"");sel.appendChild(o)})}
-    else{var o=document.createElement("option");o.value="";o.textContent="No driver list yet — just confirm";sel.appendChild(o)}
-    $("accPrice").value="";openModal("acceptModal");
-  }
-  if(act==="rate"){var v=parseInt(t.dataset.val,10);if(v>=1&&v<=5)updateBooking(id,{rating:v})}
-  if(act==="done")updateBooking(id,{status:"done"});
-  if(act==="decline"){pickedReason="";$("declineText").value="";
-    document.querySelectorAll("#declineModal .preset").forEach(function(x){x.classList.remove("sel")});
-    $("declineErr").style.display="none";openModal("declineModal")}
-  if(act==="offer"){$("offerDate").value=b.date||"";$("offerTime").value="";$("offerNote").value="";
-    $("offerErr").style.display="none";openModal("offerModal")}
-  if(act==="acceptPrice")updateBooking(id,{status:"confirmed"});
-  if(act==="acceptOffer")updateBooking(id,{status:"confirmed",date:b.offerDate||b.date,time:b.offerTime||b.time});
-  if(act==="cancel")updateBooking(id,{status:"cancelled"});
+  var b=mine.filter(function(x){return x.id===t.dataset.id})[0];if(!b)return;
+  var ref=db.doc("bookings/"+b.id),a=t.dataset.act,p=null;
+  if(a==="acceptPrice")p={status:"confirmed"};
+  if(a==="acceptOffer")p={status:"confirmed",date:b.offerDate||b.date,time:b.offerTime||b.time};
+  if(a==="cancel"){if(!confirm("Cancel this ride?"))return;p={status:"cancelled"}}
+  if(a==="rate"){var v=parseInt(t.dataset.val,10);if(v>=1&&v<=5)p={rating:v}}
+  if(p)ref.update(p).catch(function(){alert("Couldn't update — please try again.")});
 });
-
-var today=new Date();
-try{
-  var iso=today.toISOString().slice(0,10);
-  $("fDate").value=iso;$("fDate").min=iso;
-  var pr=JSON.parse(localStorage.getItem("tt_profile")||"null");
-  if(pr){$("fName").value=pr.name||"";$("fFrom").value=pr.from||"";$("fFromPc").value=pr.fromPc||""}
-}catch(e){}
-$("trackPhone").value=savedPhone();
-$("fPhone").value=savedPhone();
-
-localStore.sub(function(a){if(!db){bookings=a;renderAll()}});
-
-try{
-  firebase.initializeApp({
-    apiKey:"AIzaSyCymQ-rMRexbui_M6UiFvA9NX2fr9wM34M",
-    authDomain:"towy-taxi.firebaseapp.com",
-    projectId:"towy-taxi",
-    storageBucket:"towy-taxi.firebasestorage.app",
-    messagingSenderId:"545252559547",
-    appId:"1:545252559547:web:c370e91c47fa02ff63b79e"
+function watch(){
+  var cur={};mine.forEach(function(b){cur[b.id]=b.status});
+  if(prevStatus)mine.forEach(function(b){
+    var was=prevStatus[b.id]; if(!was||was===b.status)return;
+    var m={priced:"Price offered: "+TT.money(b.price)+" — tap OK to book",confirmed:"Your ride is confirmed"+(b.driverName?" · driver "+b.driverName:""),
+      declined:"Sorry, the driver can't take this ride"+(b.reason?" — "+b.reason:""),counter:"The driver offered another time"}[b.status];
+    if(m&&!(b.status==="confirmed"&&(was==="priced"||was==="counter")))TT.alertUser("TOWY TAXI "+(b.ref||""),m+" · "+TT.fmtWhen(b));
   });
-  db=firebase.firestore();
-}catch(e){db=null}
-if(db){
-  unsub=db.collection("bookings").onSnapshot(function(snap){
-    var a=[];snap.docs.forEach(function(d){var v=Object.assign({},d.data());v.id=d.id;a.push(v)});
-    bookings=a;renderAll();watchChanges();
-  },function(){ $("offlineBanner").style.display="block"; db=null; localStore.emit(); });
-  db.collection("drivers").onSnapshot(function(snap){
-    var a=[];snap.docs.forEach(function(d){var v=Object.assign({},d.data());v.id=d.id;a.push(v)});
-    drivers=a;renderDrivers();
-  },function(){});
-}else{
-  $("offlineBanner").style.display="block";
-  renderAll();
+  prevStatus=cur;
 }
 })();
 </script>
-<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}</script>
 </body>
 </html>
