@@ -92,6 +92,9 @@ input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;bo
 .preset{display:block;width:100%;text-align:left;margin-top:8px;padding:11px 12px;border:1px solid var(--line);
   border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;font-size:14.5px;cursor:pointer}
 .preset.sel{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:-1px}
+.hint{font-size:13px;color:var(--muted);margin:5px 0 0;min-height:0}
+.hint.okc{color:var(--ok)}.hint.badc{color:var(--bad)}
+.leaflet-container{font:inherit}
 .badge-count{background:var(--accent);color:var(--accent-ink);border-radius:999px;font-size:12px;padding:1px 7px;margin-left:5px;font-weight:600}
 .star{background:none;border:none;font-size:28px;line-height:1;color:var(--muted);cursor:pointer;padding:2px 5px}
 .star:active{color:var(--accent)}
@@ -127,11 +130,21 @@ input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;bo
         <div style="flex:1.6"><input id="fFrom" type="text" placeholder="12 King Street, Carmarthen"></div>
         <div><input id="fFromPc" type="text" autocomplete="postal-code" placeholder="SA31 1BH" style="text-transform:uppercase"></div>
       </div>
+      <p class="hint" id="fromPcInfo"></p>
+      <button type="button" class="btn small quiet" id="pinBtn" style="margin-top:8px">📍 Set exact pick-up spot on map</button>
+      <div id="mapWrap" style="display:none;margin-top:10px">
+        <div id="map" style="height:260px;border-radius:10px;border:1px solid var(--line);z-index:0"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px">
+          <button type="button" class="btn small quiet" id="locBtn" style="margin:0">Use my location</button>
+          <span class="hint" id="pinInfo" style="text-align:right">Tap the map where you'll be waiting</span>
+        </div>
+      </div>
       <label for="fTo">Going to</label>
       <div class="row">
         <div style="flex:1.6"><input id="fTo" type="text" placeholder="Glangwili Hospital"></div>
         <div><input id="fToPc" type="text" placeholder="SA31 2AF" style="text-transform:uppercase"></div>
       </div>
+      <p class="hint" id="toPcInfo"></p>
       <div class="row">
         <div><label for="fDate">Date</label><input id="fDate" type="date"></div>
         <div><label for="fTime">Time</label><input id="fTime" type="time"></div>
@@ -161,6 +174,13 @@ input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;bo
   </section>
 
   <section id="tab-driver" style="display:none">
+    <div class="card">
+<div class="card">
+      <h2>Alerts</h2>
+      <p class="sub">With this app open you'll hear a chime on every new booking. To get alerts even when it's closed, install the free <strong>ntfy</strong> app (App Store / Google Play), tap +, and subscribe to:</p>
+      <p style="font-family:ui-monospace,Menlo,monospace;font-size:15px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 12px;margin:0;word-break:break-all">towy-taxi-bbvca4h9pj</p>
+      <button class="btn quiet" id="alertsOn">Turn on alerts &amp; test sound</button>
+    </div>
     <div class="card">
       <h2>Bookings</h2>
       <p class="sub">New requests first. Tap to respond.</p>
@@ -339,6 +359,8 @@ function renderDriver(){
   $("driverList").innerHTML=list.map(function(b){
     var h='<div class="ride"><div class="top"><span class="when">'+fmtWhen(b)+'</span>'+chip(b.status)+'</div>';
     h+='<p class="route">'+esc(b.from)+(b.fromPc?', '+esc(b.fromPc):'')+' &rarr; '+esc(b.to)+(b.toPc?', '+esc(b.toPc):'')+'</p>';
+    var navTo=b.pickLat?(b.pickLat+","+b.pickLng):(b.from+(b.fromPc?", "+b.fromPc:""));
+    h+='<p class="meta"><a href="https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(navTo)+'" target="_blank" rel="noopener" style="color:var(--offer);text-decoration:none">📍 '+(b.pickLat?'Navigate to exact pin':'Navigate to address')+'</a></p>';
     h+='<p class="meta">'+(b.ref?esc(b.ref)+' &middot; ':'')+esc(b.name)+' &middot; '+esc(b.phone)+(b.pax?' &middot; '+esc(b.pax)+' pax':'')+(b.returnTime?' &middot; return '+esc(b.returnTime):'')+(b.notes?' &middot; '+esc(b.notes):'')+'</p>';
     if(b.driverName||typeof b.price==="number"||b.rating){h+='<p class="meta">'+(b.driverName?esc(b.driverName)+(b.driverCar?' ('+esc(b.driverCar)+')':''):'')+(typeof b.price==="number"?((b.driverName?' &middot; ':'')+'&pound;'+b.price.toFixed(2)):'')+(b.rating?' &middot; rated '+b.rating+'/5 \u2605':'')+'</p>'}
     if(b.status==="new"){
@@ -350,9 +372,132 @@ function renderDriver(){
     if(b.status==="counter"){h+='<p class="meta">Offered '+esc(b.offerDate||"")+' '+esc(b.offerTime||"")+' — waiting for the customer.</p>'}
     if(b.status==="confirmed"){h+='<button class="btn small quiet" data-act="done" data-id="'+b.id+'">Mark completed</button>'}
     if(b.status==="declined"&&(b.reason||b.comment)){h+='<div class="reason">'+esc(b.reason||"")+(b.comment?(b.reason?" — ":"")+esc(b.comment):"")+'</div>'}
+    h+=contactButtons(b);
     return h+'</div>';
   }).join("");
 }
+
+var NTFY_TOPIC="towy-taxi-bbvca4h9pj";
+var APP_URL="https://iramazur1991.github.io/towy_taxi/";
+var actx=null;
+function unlockAudio(){try{if(!actx){var C=window.AudioContext||window.webkitAudioContext;if(C)actx=new C()}if(actx&&actx.state==="suspended")actx.resume()}catch(e){}}
+document.addEventListener("click",unlockAudio,{once:false,passive:true});
+document.addEventListener("touchstart",unlockAudio,{once:false,passive:true});
+function beep(){try{unlockAudio();if(!actx)return;[0,0.25].forEach(function(t){var o=actx.createOscillator(),g=actx.createGain();o.type="sine";o.frequency.value=t?1175:880;var s=actx.currentTime+t;g.gain.setValueAtTime(0.3,s);g.gain.exponentialRampToValueAtTime(0.001,s+0.35);o.connect(g);g.connect(actx.destination);o.start(s);o.stop(s+0.36)})}catch(e){}}
+function alertUser(title,body){
+  beep();
+  try{if(navigator.vibrate)navigator.vibrate([200,100,200])}catch(e){}
+  try{if(window.Notification&&Notification.permission==="granted"&&navigator.serviceWorker){
+    navigator.serviceWorker.ready.then(function(r){r.showNotification(title,{body:body,icon:(MODE==="driver"?"driver-icon-192.png":"icon-192.png"),tag:"towy-"+Date.now()})}).catch(function(){})}}catch(e){}
+  var t=document.title;document.title="\u25CF "+title;setTimeout(function(){document.title=t},6000);
+}
+function askNotify(){try{if(window.Notification&&Notification.permission==="default")Notification.requestPermission()}catch(e){}}
+function notifyDriver(b){
+  try{fetch("https://ntfy.sh/",{method:"POST",body:JSON.stringify({topic:NTFY_TOPIC,title:"TOWY TAXI — new booking",
+    message:(b.ref||"")+" · "+b.date+" "+b.time+" · open TOWY Driver to respond",tags:["taxi"],priority:4,click:APP_URL+"driver.html"})}).catch(function(){})}catch(e){}
+}
+var prevStatus=null;
+function watchChanges(){
+  var cur={};bookings.forEach(function(b){cur[b.id]=b.status});
+  if(prevStatus){
+    if(MODE==="driver"){
+      bookings.forEach(function(b){
+        var was=prevStatus[b.id];
+        if(!was&&b.status==="new")alertUser("New booking "+(b.ref||""),fmtWhen(b)+" · "+b.from+" → "+b.to);
+        else if(was&&was!==b.status){
+          if(b.status==="confirmed"&&(was==="priced"||was==="counter"))alertUser("Customer accepted "+(b.ref||""),fmtWhen(b)+" · "+b.name);
+          if(b.status==="cancelled")alertUser("Customer cancelled "+(b.ref||""),fmtWhen(b)+" · "+b.name);
+        }
+      });
+    }else{
+      var raw=$("trackPhone").value||"",ph=(normPhone(raw)||raw).replace(/\s+/g,"");
+      bookings.forEach(function(b){
+        var was=prevStatus[b.id];
+        if(!was||was===b.status||!ph||(b.phone||"").replace(/\s+/g,"")!==ph)return;
+        var msg={priced:"Price offered: £"+(typeof b.price==="number"?b.price.toFixed(2):"")+" — tap OK to book",
+          confirmed:"Your ride is confirmed"+(b.driverName?" · driver "+b.driverName:""),
+          declined:"Sorry, the driver can't take this ride"+(b.reason?" — "+b.reason:""),
+          counter:"The driver offered another time"}[b.status];
+        if(msg)alertUser("TOWY TAXI "+(b.ref||""),msg+" · "+fmtWhen(b));
+      });
+    }
+  }
+  prevStatus=cur;
+}
+function msgFor(b){
+  var w=fmtWhen(b),r=b.ref?b.ref+" ":"";
+  if(b.status==="priced")return "TOWY TAXI: your ride "+r+"on "+w+" — price £"+(typeof b.price==="number"?b.price.toFixed(2):"?")+(b.driverName?", driver "+b.driverName:"")+". Please tap OK in the app to book: "+APP_URL;
+  if(b.status==="confirmed")return "TOWY TAXI: your ride "+r+"on "+w+" is confirmed."+(b.driverName?" Driver: "+b.driverName+(b.driverCar?" ("+b.driverCar+")":"")+".":"")+(typeof b.price==="number"?" Price £"+b.price.toFixed(2)+".":"")+" See you then!";
+  if(b.status==="declined")return "TOWY TAXI: sorry, we can't take your ride "+r+"on "+w+"."+(b.reason?" "+b.reason+".":"")+(b.comment?" "+b.comment:"");
+  if(b.status==="counter")return "TOWY TAXI: we can't do "+w+", but can offer "+fmtWhen({date:b.offerDate,time:b.offerTime})+"."+(b.offerNote?" "+b.offerNote:"")+" Tap accept in the app: "+APP_URL;
+  return "";
+}
+function contactButtons(b){
+  var m=msgFor(b);if(!m)return "";
+  var p=String(b.phone||"").replace(/\s+/g,""),intl=p.charAt(0)==="0"?"44"+p.slice(1):p.replace(/^\+/,"");
+  var t=encodeURIComponent(m);
+  return '<a class="btn small quiet" style="text-decoration:none" href="sms:'+p+'?&body='+t+'">\uD83D\uDCAC SMS customer</a>'+
+         '<a class="btn small quiet" style="text-decoration:none" href="https://wa.me/'+intl+'?text='+t+'" target="_blank" rel="noopener">WhatsApp</a>';
+}
+
+
+var map=null,pin=null,pinLL=null,DEFAULT_LL=[51.8576,-4.3121];
+function lookupPc(pc){
+  return fetch("https://api.postcodes.io/postcodes/"+encodeURIComponent(pc)).then(function(r){return r.json()})
+    .then(function(j){return (j&&j.status===200&&j.result)?j.result:null}).catch(function(){return undefined});
+}
+function pcCheck(inputId,infoId){
+  var el=$(inputId),info=$(infoId);if(!el||!info)return;
+  el.addEventListener("blur",function(){
+    var pc=normPc(el.value);info.className="hint";info.textContent="";
+    if(!pc)return;
+    el.value=pc;
+    lookupPc(pc).then(function(r){
+      if(r===undefined)return;
+      if(!r){info.className="hint badc";info.textContent="\u2717 Postcode not found — please check it";return}
+      info.className="hint okc";
+      info.textContent="\u2713 "+[r.parish||r.admin_ward,r.admin_district].filter(function(x,i,a){return x&&a.indexOf(x)===i}).join(", ");
+    });
+  });
+}
+pcCheck("fFromPc","fromPcInfo");pcCheck("fToPc","toPcInfo");
+function setPin(ll){
+  var lat=ll.lat!==undefined?ll.lat:ll[0],lng=ll.lng!==undefined?ll.lng:ll[1];
+  if(!pin){pin=L.circleMarker([lat,lng],{radius:11,color:"#17150F",weight:3,fillColor:"#F2B417",fillOpacity:1}).addTo(map)}
+  else pin.setLatLng([lat,lng]);
+  pinLL={lat:Math.round(lat*1e6)/1e6,lng:Math.round(lng*1e6)/1e6};
+  $("pinInfo").className="hint okc";$("pinInfo").textContent="\u2713 Pin set — tap again to move it";
+  $("pinBtn").textContent="📍 Pick-up spot set \u2713 (tap to change)";
+}
+function openMap(){
+  $("mapWrap").style.display="";
+  if(!map){
+    if(!window.L){$("pinInfo").textContent="Map couldn't load — add directions in the notes";return}
+    map=L.map("map",{zoomControl:true}).setView(DEFAULT_LL,13);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"&copy; OpenStreetMap"}).addTo(map);
+    map.on("click",function(e){setPin(e.latlng)});
+  }
+  setTimeout(function(){map.invalidateSize();
+    if(pinLL){map.setView([pinLL.lat,pinLL.lng],17);return}
+    var pc=normPc($("fFromPc").value);
+    if(pc){lookupPc(pc).then(function(r){if(r)map.setView([r.latitude,r.longitude],17)})}
+  },60);
+}
+if($("pinBtn")){
+  $("pinBtn").addEventListener("click",openMap);
+  $("locBtn").addEventListener("click",function(){
+    if(!navigator.geolocation){$("pinInfo").textContent="Location not available — tap the map";return}
+    $("pinInfo").className="hint";$("pinInfo").textContent="Finding you…";
+    navigator.geolocation.getCurrentPosition(function(p){
+      var ll=[p.coords.latitude,p.coords.longitude];map.setView(ll,17);setPin(ll);
+    },function(){$("pinInfo").className="hint badc";$("pinInfo").textContent="Couldn't get your location — tap the map instead"},
+    {enableHighAccuracy:true,timeout:10000,maximumAge:60000});
+  });
+}
+function resetPin(){pinLL=null;if(pin&&map){map.removeLayer(pin)}pin=null;
+  if($("pinBtn")){$("pinBtn").textContent="📍 Set exact pick-up spot on map";$("mapWrap").style.display="none";
+  $("pinInfo").className="hint";$("pinInfo").textContent="Tap the map where you'll be waiting"}}
+
 function renderAll(){renderMine();renderDriver();renderDrivers()}
 
 var DRIVER_PIN="2626";
@@ -377,6 +522,7 @@ $("pinSend").addEventListener("click",function(){
   }else{$("pinErr").style.display="block"}
 });
 $("pinInput").addEventListener("input",function(){$("pinErr").style.display="none"});
+$("alertsOn").addEventListener("click",function(){askNotify();beep();try{if(navigator.vibrate)navigator.vibrate(150)}catch(e){}});
 
 var MODE=document.documentElement.getAttribute("data-mode")==="driver"?"driver":"client";
 if(MODE==="client"){
@@ -424,11 +570,14 @@ $("bookBtn").addEventListener("click",function(){
   var b={ref:makeRef(),name:name,phone:phone,from:from,fromPc:fromPc,to:to,toPc:toPc,
     date:date,time:time,pax:$("fPax").value,returnTime:$("fReturn").value,
     notes:$("fNotes").value.trim(),status:"new",createdAt:Date.now()};
+  if(pinLL){b.pickLat=pinLL.lat;b.pickLng=pinLL.lng}
+  askNotify();
   addBooking(b).then(function(){
+    notifyDriver(b);
     savePhone(phone);
     try{localStorage.setItem("tt_profile",JSON.stringify({name:name,from:from,fromPc:fromPc}))}catch(e){}
     $("trackPhone").value=phone;$("fPhone").value=phone;
-    $("fTo").value="";$("fToPc").value="";$("fNotes").value="";$("fTime").value="";$("fReturn").value="";
+    $("fTo").value="";$("fToPc").value="";resetPin();if($("toPcInfo"))$("toPcInfo").textContent="";$("fNotes").value="";$("fTime").value="";$("fReturn").value="";
     document.querySelector('#nav button[data-tab="mine"]').click();
   });
 });
@@ -532,7 +681,7 @@ try{
 if(db){
   unsub=db.collection("bookings").onSnapshot(function(snap){
     var a=[];snap.docs.forEach(function(d){var v=Object.assign({},d.data());v.id=d.id;a.push(v)});
-    bookings=a;renderAll();
+    bookings=a;renderAll();watchChanges();
   },function(){ $("offlineBanner").style.display="block"; db=null; localStore.emit(); });
   db.collection("drivers").onSnapshot(function(snap){
     var a=[];snap.docs.forEach(function(d){var v=Object.assign({},d.data());v.id=d.id;a.push(v)});
