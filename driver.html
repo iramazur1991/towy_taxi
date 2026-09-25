@@ -3,7 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#F2B417">
+<meta name="theme-color" content="#17150F">
+<link rel="manifest" href="driver-manifest.json">
+<link rel="icon" href="driver-icon-192.png">
+<link rel="apple-touch-icon" href="driver-icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="TOWY Driver">
 <meta name="robots" content="noindex">
 <title>TOWY TAXI — Driver</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&display=swap">
@@ -539,5 +544,6 @@ if(db){
 }
 })();
 </script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}</script>
 </body>
 </html>

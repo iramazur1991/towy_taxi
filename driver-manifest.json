@@ -1,0 +1,17 @@
+{
+  "id": "/towy_taxi/driver.html",
+  "name": "TOWY Driver",
+  "short_name": "TOWY Driver",
+  "description": "TOWY TAXI driver panel — bookings, prices and drivers.",
+  "start_url": "/towy_taxi/driver.html",
+  "scope": "/towy_taxi/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#17150F",
+  "theme_color": "#17150F",
+  "icons": [
+    {"src": "driver-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "driver-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "driver-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
