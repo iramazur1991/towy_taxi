@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#F2B417">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="TOWY TAXI">
 <meta name="description" content="TOWY TAXI — pre-book your taxi in Carmarthen and around.">
 <title>TOWY TAXI — book a ride</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&display=swap">
@@ -142,6 +147,7 @@ input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;bo
       <p class="err" id="formErr">Fill in name, phone, both addresses, date and time.</p>
       <button class="btn" id="bookBtn">Request this ride</button>
       <p class="note">Card payment is added at the next stage — for now you pay the driver.</p>
+      <p class="note"><a href="privacy.html" style="color:inherit">Privacy policy</a></p>
     </div>
   </section>
 
@@ -539,5 +545,6 @@ if(db){
 }
 })();
 </script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}</script>
 </body>
 </html>
