@@ -213,7 +213,7 @@ function freshVerifier(){
   return verifier;
 }
 var FALLBACK=["auth/billing-not-enabled","auth/operation-not-allowed","auth/invalid-app-credential","auth/unauthorized-domain","auth/internal-error"];
-function afterSignIn(){TT.closeModal("phoneModal");if(pending){var b=pending;pending=null;submit(b)}}
+function afterSignIn(){TT.closeModal("phoneModal");user=auth.currentUser;renderMine();if(pending){var b=pending;pending=null;submit(b)}}
 function sendCode(){
   var e164=TT.toE164($("phInput").value); if(!e164){phErr("Check the number — like 07700 900123.");return}
   phErr("");$("phSend").disabled=true;$("phSend").textContent="Sending…";
@@ -223,7 +223,7 @@ function sendCode(){
     setTimeout(function(){$("phCode").focus()},50);
   }).catch(function(err){
     if(err&&FALLBACK.indexOf(err.code)>=0){
-      auth.signInAnonymously().then(afterSignIn).catch(function(){phErr("Sign-in isn't available right now — please call us.")});
+      phErr("Text codes aren't switched on yet — please use Continue with Google.");
     }else if(err&&err.code==="auth/too-many-requests"){phErr("Too many attempts — please wait a few minutes.")}
     else if(err&&err.code==="auth/invalid-phone-number"){phErr("That number doesn't look right.")}
     else phErr("Couldn't send the code — please try again.");
@@ -234,7 +234,14 @@ $("phSend").addEventListener("click",sendCode);
 function googleSignIn(){
   var pr=new firebase.auth.GoogleAuthProvider(); pr.setCustomParameters({prompt:"select_account"});
   phErr(""); $("gSignIn").disabled=true;
-  auth.signInWithPopup(pr).then(afterSignIn).catch(function(err){
+  var cu=auth.currentUser;
+  var go=(cu&&cu.isAnonymous)
+    ? cu.linkWithPopup(pr).catch(function(err){
+        if(err&&err.code==="auth/credential-already-in-use"&&err.credential)return auth.signInWithCredential(err.credential);
+        throw err;
+      })
+    : auth.signInWithPopup(pr);
+  go.then(afterSignIn).catch(function(err){
     var c=err&&err.code;
     if(c==="auth/popup-closed-by-user"||c==="auth/cancelled-popup-request"){return}
     if(c==="auth/popup-blocked"||c==="auth/operation-not-supported-in-this-environment"){
@@ -266,7 +273,10 @@ function renderMine(){
     $("mineList").innerHTML="";$("mineCount").style.display="none";return;
   }
   if(user.isAnonymous){
-    $("mineAuth").innerHTML='<div class="who"><span>Your rides on this phone</span></div>';
+    $("mineAuth").innerHTML='<div class="who"><span>Guest on this phone</span><button class="linkbtn" id="signOut">Sign out</button></div>'+
+      '<button class="btn small quiet" id="guestUp" style="margin:0 0 12px">Sign in with Google to keep your rides</button>';
+    $("guestUp").addEventListener("click",function(){openPhone()});
+    $("signOut").addEventListener("click",function(){if(confirm("Sign out? Rides booked as a guest won't show here any more."))auth.signOut()});
   }else{
     $("mineAuth").innerHTML='<div class="who"><span>Signed in: '+esc(TT.normPhone(user.phoneNumber)||user.email||"")+'</span><button class="linkbtn" id="signOut">Sign out</button></div>';
     $("signOut").addEventListener("click",function(){if(confirm("Sign out? You can sign back in any time."))auth.signOut()});
