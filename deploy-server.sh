@@ -8,6 +8,8 @@ say(){ printf "\n\033[1;33m== %s ==\033[0m\n" "$1"; }
 
 say "1/5 Checking project"
 gcloud config set project "$PROJECT" >/dev/null 2>&1
+echo "Switching on required Google services..."
+gcloud services enable cloudbilling.googleapis.com firestore.googleapis.com --project "$PROJECT" >/dev/null 2>&1 && sleep 20
 LOC=$(gcloud firestore databases describe --database='(default)' --project "$PROJECT" --format='value(locationId)' 2>/dev/null)
 case "$LOC" in
   nam5) REGION=us-central1 ;;
@@ -26,7 +28,7 @@ cat > .firebaserc <<'TOWYEOF'
 { "projects": { "default": "towy-taxi" } }
 TOWYEOF
 cat > functions/package.json <<'TOWYEOF'
-{"name":"towy-functions","private":true,"main":"index.js","engines":{"node":"20"},
+{"name":"towy-functions","private":true,"main":"index.js","engines":{"node":"22"},
  "dependencies":{"firebase-admin":"^12.7.0","firebase-functions":"^6.1.0"}}
 TOWYEOF
 cat > firestore.rules <<'TOWYEOF'
