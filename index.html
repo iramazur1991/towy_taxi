@@ -79,7 +79,7 @@
       <div class="fare" id="fareHint"></div>
       <p class="err" id="formErr"></p>
       <button class="btn" id="bookBtn">Request this ride</button>
-      <p class="note">We'll text you a code to confirm your number the first time.</p>
+      <p class="note">The first time, you'll sign in with Google or a text code.</p>
       <p class="note"><a href="privacy.html" style="color:inherit">Privacy policy</a></p>
     </div>
   </section>
@@ -96,8 +96,13 @@
 <div class="modal-bg" id="phoneModal">
   <div class="modal">
     <div id="phStep1">
-      <h3>Confirm your number</h3>
-      <p class="sub">We'll send a 6-digit code by text message.</p>
+      <h3>Sign in to book</h3>
+      <p class="sub">Only needed once on this phone.</p>
+      <button class="btn quiet" id="gSignIn" style="display:flex;align-items:center;justify-content:center;gap:10px">
+        <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.2 0 24 0 14.6 0 6.6 5.4 2.7 13.2l7.9 6.2C12.5 13.7 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 2.9-2.2 5.4-4.7 7.1l7.6 5.9c4.4-4.1 6.9-10.1 6.9-17.5z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-2.9-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C1 16.6 0 20.2 0 24s1 7.4 2.7 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.2 0-11.5-4.2-13.4-9.9l-7.9 6.2C6.6 42.6 14.6 48 24 48z"/></svg>
+        Continue with Google
+      </button>
+      <p class="note" style="margin:14px 0 4px">or get a code by text message</p>
       <input id="phInput" type="tel" autocomplete="tel" placeholder="07700 900123">
       <button class="btn" id="phSend">Send code</button>
     </div>
@@ -225,6 +230,26 @@ function sendCode(){
   }).then(function(){$("phSend").disabled=false;$("phSend").textContent="Send code"});
 }
 $("phSend").addEventListener("click",sendCode);
+/* Google sign-in: popup first (works with github.io + firebaseapp.com), redirect as backup */
+function googleSignIn(){
+  var pr=new firebase.auth.GoogleAuthProvider(); pr.setCustomParameters({prompt:"select_account"});
+  phErr(""); $("gSignIn").disabled=true;
+  auth.signInWithPopup(pr).then(afterSignIn).catch(function(err){
+    var c=err&&err.code;
+    if(c==="auth/popup-closed-by-user"||c==="auth/cancelled-popup-request"){return}
+    if(c==="auth/popup-blocked"||c==="auth/operation-not-supported-in-this-environment"){
+      try{if(pending)sessionStorage.setItem("tt_pending",JSON.stringify(pending))}catch(e){}
+      return auth.signInWithRedirect(pr);
+    }
+    if(c==="auth/unauthorized-domain")phErr("Google sign-in isn't set up for this site yet — use a text code.");
+    else if(c==="auth/operation-not-allowed")phErr("Google sign-in isn't switched on yet — use a text code.");
+    else phErr("Couldn't sign in with Google — try again or use a text code.");
+  }).then(function(){$("gSignIn").disabled=false});
+}
+$("gSignIn").addEventListener("click",googleSignIn);
+auth.getRedirectResult().then(function(r){
+  if(r&&r.user){try{var p=JSON.parse(sessionStorage.getItem("tt_pending")||"null");sessionStorage.removeItem("tt_pending");if(p){pending=p;afterSignIn()}}catch(e){}}
+}).catch(function(){});
 $("phResend").addEventListener("click",function(){$("phStep1").style.display="";$("phStep2").style.display="none";phErr("")});
 $("phConfirm").addEventListener("click",function(){
   var c=$("phCode").value.trim(); if(!/^\d{6}$/.test(c)){phErr("Enter the 6-digit code.");return}
@@ -236,13 +261,16 @@ $("phCancel").addEventListener("click",function(){pending=null;TT.closeModal("ph
 /* My rides */
 function renderMine(){
   if(!user){
-    $("mineAuth").innerHTML='<p class="sub">Sign in with your mobile number to see your rides.</p><button class="btn" id="mineSignIn">Sign in with my number</button>';
+    $("mineAuth").innerHTML='<p class="sub">Sign in to see your rides.</p><button class="btn" id="mineSignIn">Sign in</button>';
     $("mineSignIn").addEventListener("click",function(){openPhone()});
     $("mineList").innerHTML="";$("mineCount").style.display="none";return;
   }
-  var who=user.phoneNumber?TT.normPhone(user.phoneNumber):"this device";
-  $("mineAuth").innerHTML='<div class="who"><span>Signed in: '+esc(who)+'</span><button class="linkbtn" id="signOut">Sign out</button></div>';
-  $("signOut").addEventListener("click",function(){auth.signOut()});
+  if(user.isAnonymous){
+    $("mineAuth").innerHTML='<div class="who"><span>Your rides on this phone</span></div>';
+  }else{
+    $("mineAuth").innerHTML='<div class="who"><span>Signed in: '+esc(TT.normPhone(user.phoneNumber)||user.email||"")+'</span><button class="linkbtn" id="signOut">Sign out</button></div>';
+    $("signOut").addEventListener("click",function(){if(confirm("Sign out? You can sign back in any time."))auth.signOut()});
+  }
   var list=mine.slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)});
   var open=list.filter(function(b){return b.status==="priced"||b.status==="counter"}).length;
   $("mineCount").style.display=open?"":"none";$("mineCount").textContent=open;
@@ -276,7 +304,10 @@ document.body.addEventListener("click",function(e){
   if(a==="acceptOffer")p={status:"confirmed",date:b.offerDate||b.date,time:b.offerTime||b.time};
   if(a==="cancel"){if(!confirm("Cancel this ride?"))return;p={status:"cancelled"}}
   if(a==="rate"){var v=parseInt(t.dataset.val,10);if(v>=1&&v<=5)p={rating:v}}
-  if(p)ref.update(p).catch(function(){alert("Couldn't update — please try again.")});
+  if(p)ref.update(p).then(function(){
+    if(p.status==="confirmed")TT.notifyStaff("TOWY TAXI — customer accepted",(b.ref||"")+" · "+(p.date||b.date)+" "+(p.time||b.time)+" is now confirmed");
+    if(p.status==="cancelled")TT.notifyStaff("TOWY TAXI — customer cancelled",(b.ref||"")+" · "+b.date+" "+b.time+" was cancelled");
+  }).catch(function(){alert("Couldn't update — please try again.")});
 });
 function watch(){
   var cur={};mine.forEach(function(b){cur[b.id]=b.status});
