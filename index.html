@@ -124,6 +124,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js"></script>
 <script src="core.js"></script>
 <script>
 (function(){
@@ -160,6 +161,7 @@ try{var pr=JSON.parse(localStorage.getItem("tt_profile")||"null");
 /* Auth state */
 auth.onAuthStateChanged(function(u){
   user=u;
+  if(u)TT.registerPush(F.app,db,u,"client",false);
   if(u&&u.phoneNumber&&!$("fPhone").value)$("fPhone").value=TT.normPhone(u.phoneNumber)||"";
   if(unsubMine){unsubMine();unsubMine=null} mine=[];prevStatus=null;
   if(u){
@@ -193,12 +195,15 @@ function submit(b){
   $("bookBtn").disabled=true;
   db.collection("bookings").add(b).then(function(){
     TT.notifyDriver(b);
+    TT.registerPush(F.app,db,u,"client",false);
     try{localStorage.setItem("tt_profile",JSON.stringify({name:b.name,phone:b.phone,from:b.from,fromPc:b.fromPc}))}catch(e){}
     $("fTo").value="";$("fToPc").value="";$("fNotes").value="";$("fTime").value="";$("fReturn").value="";$("toPcInfo").textContent="";
     pick.reset();drop.reset();updateFare();switchTab("mine");
   }).catch(function(){showErr("Couldn't send the booking — please try again.")}).then(function(){$("bookBtn").disabled=false});
 }
-$("bookBtn").addEventListener("click",function(){var b=collect();if(!b)return;$("formErr").style.display="none";TT.askNotify();submit(b)});
+$("bookBtn").addEventListener("click",function(){var b=collect();if(!b)return;$("formErr").style.display="none";
+  if(TT.pushState()==="default"){try{Notification.requestPermission()}catch(e){}}
+  submit(b)});
 
 /* Phone sign-in (SMS) with anonymous fallback if SMS isn't enabled yet */
 function phErr(m){$("phErr").textContent=m;$("phErr").style.display=m?"block":"none"}
@@ -280,6 +285,13 @@ function renderMine(){
   }else{
     $("mineAuth").innerHTML='<div class="who"><span>Signed in: '+esc(TT.normPhone(user.phoneNumber)||user.email||"")+'</span><button class="linkbtn" id="signOut">Sign out</button></div>';
     $("signOut").addEventListener("click",function(){if(confirm("Sign out? You can sign back in any time."))auth.signOut()});
+  }
+  var ps=TT.pushState();
+  if(ps==="default"||ps==="unsupported"){
+    $("mineAuth").insertAdjacentHTML("beforeend",ps==="default"
+      ?'<button class="btn small quiet" id="pushOn" style="margin:0 0 12px">🔔 Get notified when your ride is confirmed</button>'
+      :'<p class="hint" style="margin:0 0 12px">On iPhone: add TOWY TAXI to your Home Screen to get ride notifications.</p>');
+    if($("pushOn"))$("pushOn").addEventListener("click",function(){TT.registerPush(F.app,db,user,"client",true).then(function(){renderMine()})});
   }
   var list=mine.slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)});
   var open=list.filter(function(b){return b.status==="priced"||b.status==="counter"}).length;

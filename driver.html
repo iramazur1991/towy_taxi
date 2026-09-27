@@ -78,7 +78,9 @@
       </div>
       <div class="card">
         <h2>Alerts</h2>
-        <p class="sub">With this app open you'll hear a chime on every new booking. For alerts when it's closed, install the free <strong>ntfy</strong> app, tap +, and subscribe to:</p>
+        <p class="sub">Tap the button once on each phone to get notifications even when the app is closed. On iPhone, open TOWY Driver from its Home Screen icon first.</p>
+        <p class="hint" id="pushStatus" style="margin:0 0 10px"></p>
+        <p class="sub" style="margin-top:4px">Backup: the free <strong>ntfy</strong> app, subscribed to:</p>
         <p style="font-family:ui-monospace,Menlo,monospace;font-size:15px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 12px;margin:0;word-break:break-all" id="topicText"></p>
         <button class="btn quiet" id="alertsOn">Turn on alerts &amp; test sound</button>
       </div>
@@ -172,6 +174,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js"></script>
 <script src="core.js"></script>
 <script>
 (function(){
@@ -195,6 +198,7 @@ function loadMe(u){
     $("whoText").textContent="Signed in: "+me.name+(isAdmin?" (admin)":"");
     document.querySelectorAll(".admin-only").forEach(function(b){b.style.display=isAdmin?"":"none"});
     switchTab("bookings"); screen("scPanel"); subscribe();
+    TT.registerPush(F.app,db,u,"staff",false).then(function(ok){showPush(ok)});
   }).catch(function(){$("blkText").textContent="Couldn't load your account. Check your connection and try again.";screen("scBlocked")});
 }
 $("lgBtn").addEventListener("click",function(){
@@ -240,6 +244,11 @@ function subscribe(){
   subs.push(db.collection("bookings").onSnapshot(function(s){bookings=snapList(s);renderBookings();renderStaff();watch()},function(){}));
   subs.push(db.collection("staff").onSnapshot(function(s){staff=snapList(s);renderStaff()},function(){}));
   subs.push(db.collection("routes").onSnapshot(function(s){routes=snapList(s);renderFares()},function(){}));
+  subs.push(db.doc("staff/"+me.uid).onSnapshot(function(d){
+    if(!d.exists||d.data().active!==true){auth.signOut();return}
+    var wasAdmin=isAdmin; me=Object.assign({uid:me.uid},d.data()); isAdmin=me.role==="admin";
+    if(wasAdmin!==isAdmin)loadMe(auth.currentUser);
+  },function(){}));
 }
 
 /* ---------- Tabs ---------- */
@@ -284,7 +293,8 @@ function renderBookings(){
   });
   if(!list.length){$("bookList").innerHTML='<p class="empty">'+(view==="history"?"No finished rides yet.":view==="mine"?"No rides assigned to you.":"No active bookings — new ones appear here live.")+'</p>';return}
   $("bookList").innerHTML=list.map(function(b){
-    var h='<div class="ride"><div class="top"><span class="when">'+esc(TT.fmtWhen(b))+'</span>'+TT.chip(b.status)+'</div>';
+    var late=ACTIVE.indexOf(b.status)>=0&&new Date(b.date+"T"+(b.time||"00:00")).getTime()<Date.now()-60*60000;
+    var h='<div class="ride"><div class="top"><span class="when">'+esc(TT.fmtWhen(b))+(late?' <span class="chip s-declined">past</span>':'')+'</span>'+TT.chip(b.status)+'</div>';
     h+='<p class="route">'+esc(b.from)+(b.fromPc?', '+esc(b.fromPc):'')+' &rarr; '+esc(b.to)+(b.toPc?', '+esc(b.toPc):'')+'</p>';
     h+='<p class="meta">'+esc(b.ref||"")+' &middot; '+esc(b.name)+' &middot; '+esc(b.phone)+(b.pax?' &middot; '+esc(b.pax)+' pax':'')+(b.returnTime?' &middot; return '+esc(b.returnTime):'')+(b.notes?' &middot; '+esc(b.notes):'')+'</p>';
     h+='<p class="navlinks"><a href="'+TT.mapsLink(b.pickLat,b.pickLng,b.from+(b.fromPc?", "+b.fromPc:""))+'" target="_blank" rel="noopener">📍 Pick-up'+(b.pickLat?' (pin)':'')+'</a>'+
@@ -308,6 +318,19 @@ function renderBookings(){
   }).join("");
 }
 function upd(id,p){p.updatedAt=Date.now();return db.doc("bookings/"+id).update(p).catch(function(){alert("Couldn't save — check your connection.")})}
+/* Respond to a NEW booking atomically, so two drivers can't take the same ride */
+function claim(id,p){
+  p.updatedAt=Date.now(); var ref=db.doc("bookings/"+id);
+  return db.runTransaction(function(tx){return tx.get(ref).then(function(s){
+    if(!s.exists)throw {gone:true}; var d=s.data();
+    if(d.status!=="new")throw {taken:d.driverName||"someone else",st:d.status};
+    tx.update(ref,p);
+  })}).catch(function(x){
+    if(x&&x.taken)alert("Too late — this booking was already handled"+(x.st==="priced"||x.st==="confirmed"?" by "+x.taken:"")+".");
+    else if(x&&x.gone)alert("This booking no longer exists.");
+    else alert("Couldn't save — check your connection.");
+  });
+}
 function findB(id){return bookings.filter(function(b){return b.id===id})[0]}
 document.body.addEventListener("click",function(e){
   var t=e.target.closest("[data-act]");if(!t)return;
@@ -334,7 +357,7 @@ $("accSend").addEventListener("click",function(){
   var p={driverId:did,driverName:d.name,driverCar:d.car||"",acceptedBy:me.uid};
   var pr=parseFloat($("accPrice").value);
   if(!isNaN(pr)&&pr>0){p.price=Math.round(pr*100)/100;p.status="priced"}else p.status="confirmed";
-  upd(activeId,p);TT.closeModal("acceptModal");
+  claim(activeId,p);TT.closeModal("acceptModal");
 });
 var picked="";
 document.querySelectorAll(".preset").forEach(function(x){x.addEventListener("click",function(){
@@ -343,12 +366,12 @@ document.querySelectorAll(".preset").forEach(function(x){x.addEventListener("cli
 $("declineCancel").addEventListener("click",function(){TT.closeModal("declineModal")});
 $("declineSend").addEventListener("click",function(){
   var t=$("declineText").value.trim(); if(!picked&&!t){$("declineErr").style.display="block";return}
-  upd(activeId,{status:"declined",reason:picked,comment:t,acceptedBy:me.uid});TT.closeModal("declineModal");
+  claim(activeId,{status:"declined",reason:picked,comment:t,acceptedBy:me.uid});TT.closeModal("declineModal");
 });
 $("offerCancel").addEventListener("click",function(){TT.closeModal("offerModal")});
 $("offerSend").addEventListener("click",function(){
   var d=$("offerDate").value,t=$("offerTime").value; if(!d||!t){$("offerErr").style.display="block";return}
-  upd(activeId,{status:"counter",offerDate:d,offerTime:t,offerNote:$("offerNote").value.trim(),acceptedBy:me.uid});TT.closeModal("offerModal");
+  claim(activeId,{status:"counter",offerDate:d,offerTime:t,offerNote:$("offerNote").value.trim(),acceptedBy:me.uid});TT.closeModal("offerModal");
 });
 
 /* ---------- Team (admin) ---------- */
@@ -415,7 +438,13 @@ $("frBtn").addEventListener("click",function(){
 });
 
 /* ---------- Alerts ---------- */
-$("alertsOn").addEventListener("click",function(){TT.askNotify();TT.beep();try{if(navigator.vibrate)navigator.vibrate(150)}catch(e){}});
+function showPush(ok){var s=TT.pushState(),el=$("pushStatus");
+  el.className="hint"+(s==="granted"?" okc":s==="denied"?" badc":"");
+  el.textContent=s==="granted"?(ok===false?"Notifications allowed, but this phone couldn't register — try again.":"✓ Notifications on for this phone"):
+    s==="denied"?"Notifications are blocked — allow them in your phone settings for this app.":
+    s==="unsupported"?"This browser can't show notifications — on iPhone use the Home Screen icon.":"Notifications are off on this phone.";}
+$("alertsOn").addEventListener("click",function(){TT.beep();try{if(navigator.vibrate)navigator.vibrate(150)}catch(e){}
+  TT.registerPush(F.app,db,auth.currentUser,"staff",true).then(showPush)});
 function watch(){
   var cur={};bookings.forEach(function(b){cur[b.id]=b.status});
   if(prevStatus)bookings.forEach(function(b){

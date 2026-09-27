@@ -11,6 +11,7 @@ window.TT = (function () {
   };
   var APP_URL = "https://iramazur1991.github.io/towy_taxi/";
   var NTFY_TOPIC = "towy-taxi-bbvca4h9pj";
+  var VAPID = "BF0aMsGFg-lMVRv5fK8bdRfxqJNchNqfVltotyO4MYTaGlmPAMZ2ysiltNxb6zGo1iHforAQmoX6rzZ47I6lhaA";
 
   function init(name) {
     var app = (!name || name === "[DEFAULT]") ? firebase.initializeApp(CFG) : firebase.initializeApp(CFG, name);
@@ -115,13 +116,35 @@ window.TT = (function () {
     var t = document.title; document.title = "\u25CF " + title; setTimeout(function () { document.title = t; }, 6000);
   }
   function askNotify() { try { if (window.Notification && Notification.permission === "default") Notification.requestPermission(); } catch (e) {} }
-  function notifyDriver(b) {
+  function notifyStaff(title, message) {
     try {
       fetch("https://ntfy.sh/", { method: "POST", body: JSON.stringify({
-        topic: NTFY_TOPIC, title: "TOWY TAXI — new booking",
-        message: (b.ref || "") + " · " + b.date + " " + b.time + " · open TOWY Driver to respond",
+        topic: NTFY_TOPIC, title: title, message: message,
         tags: ["taxi"], priority: 4, click: APP_URL + "driver.html" }) }).catch(function () {});
     } catch (e) {}
+  }
+  function notifyDriver(b) { notifyStaff("TOWY TAXI — new booking", (b.ref || "") + " · " + b.date + " " + b.time + " · open TOWY Driver to respond"); }
+
+  /* Real push notifications (Firebase Cloud Messaging). prompt=true only inside a tap handler. */
+  function pushState() {
+    if (!window.Notification || !navigator.serviceWorker || !window.PushManager) return "unsupported";
+    return Notification.permission;
+  }
+  function registerPush(app, db, user, role, prompt) {
+    try {
+      if (!user || pushState() === "unsupported" || typeof app.messaging !== "function") return Promise.resolve(false);
+      var perm = (prompt && Notification.permission === "default") ? Notification.requestPermission() : Notification.permission;
+      return Promise.resolve(perm).then(function (p) {
+        if (p !== "granted") return false;
+        return navigator.serviceWorker.register("sw.js").then(function () { return navigator.serviceWorker.ready; })
+          .then(function (reg) { return app.messaging().getToken({ vapidKey: VAPID, serviceWorkerRegistration: reg }); })
+          .then(function (tok) {
+            if (!tok) return false;
+            return db.doc("pushTokens/" + role + "~" + tok).set({ uid: user.uid, role: role, token: tok, updatedAt: Date.now() })
+              .then(function () { try { localStorage.setItem("tt_push_" + role, "1"); } catch (e) {} return true; });
+          });
+      }).catch(function (e) { try { console.warn("push", e); } catch (x) {} return false; });
+    } catch (e) { return Promise.resolve(false); }
   }
 
   /* Modals */
@@ -185,7 +208,7 @@ window.TT = (function () {
     CFG: CFG, APP_URL: APP_URL, NTFY_TOPIC: NTFY_TOPIC, init: init, secondaryAuth: secondaryAuth,
     $: $, esc: esc, normPhone: normPhone, toE164: toE164, normPc: normPc, fmtWhen: fmtWhen, chip: chip, money: money,
     makeRef: makeRef, lookupPc: lookupPc, pcCheck: pcCheck, findFare: findFare, beep: beep, alertUser: alertUser,
-    askNotify: askNotify, notifyDriver: notifyDriver, openModal: openModal, closeModal: closeModal, picker: picker,
+    askNotify: askNotify, notifyDriver: notifyDriver, notifyStaff: notifyStaff, registerPush: registerPush, pushState: pushState, openModal: openModal, closeModal: closeModal, picker: picker,
     mapsLink: mapsLink, routeLink: routeLink
   };
 })();
