@@ -165,7 +165,7 @@ window.TT = (function () {
       W.style.display = "";
       if (!map) {
         if (!window.L) { I.textContent = "Map couldn't load — add directions in the notes"; return; }
-        map = L.map(o.map).setView([51.8576, -4.3121], 13);
+        map = L.map(o.map).setView([51.9946, -3.7957], 13);
         L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap" }).addTo(map);
         map.on("click", function (e) { set(e.latlng.lat, e.latlng.lng); });
       }

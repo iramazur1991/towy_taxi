@@ -1,7 +1,7 @@
 {
   "name": "TOWY TAXI",
   "short_name": "TOWY TAXI",
-  "description": "Pre-book your taxi in Carmarthen and around.",
+  "description": "Pre-book your taxi in Llandovery and around.",
   "start_url": "/towy_taxi/",
   "scope": "/towy_taxi/",
   "display": "standalone",
