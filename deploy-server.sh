@@ -46,6 +46,12 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['uid', 'createdAt']);
     }
 
+    // Public app settings (e.g. whether card payments are on). Set by the server setup script only.
+    match /config/public {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Drivers and admins. Only admins can add or change them.
     match /staff/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isStaff());
@@ -115,6 +121,7 @@ const { defineSecret } = require("firebase-functions/params");
 const STRIPE_SECRET = defineSecret("STRIPE_SECRET");
 let _stripe = null;
 function stripe() { if (!_stripe) _stripe = require("stripe")(STRIPE_SECRET.value()); return _stripe; }
+const stripeReady = () => /^(sk|rk)_(test|live)_/.test(String(STRIPE_SECRET.value() || ""));
 const HOLD_DAYS = 6;            // card holds last ~7 days, so card payment opens 6 days before the ride
 const pence = (v) => Math.round(Number(v) * 100);
 const admin = require("firebase-admin");
@@ -187,6 +194,7 @@ async function toStaff(title, body, onlyUids) {
 
 /* ---------------- Stripe card payments (hold before, charge after) ---------------- */
 exports.createCheckout = onCall({ secrets: [STRIPE_SECRET] }, async (req) => {
+  if (!stripeReady()) throw new HttpsError("failed-precondition", "Card payments aren't switched on yet — please pay the driver.");
   if (!req.auth) throw new HttpsError("unauthenticated", "Please sign in first.");
   const id = String((req.data && req.data.bookingId) || "");
   if (!id) throw new HttpsError("invalid-argument", "No booking.");
@@ -315,28 +323,46 @@ if ! $FT projects:list >/dev/null 2>&1; then
 fi
 
 say "5/6 Stripe key"
-if [ "${1:-}" = "--new-stripe-key" ] || ! gcloud secrets describe STRIPE_SECRET --project "$PROJECT" >/dev/null 2>&1; then
+CUR=$(gcloud secrets versions access latest --secret STRIPE_SECRET --project "$PROJECT" 2>/dev/null)
+if [ "${1:-}" = "--new-stripe-key" ] || [ -z "$CUR" ]; then
   echo "In Stripe: Developers -> API keys. Copy the restricted key (rk_...) or the secret key (sk_...)."
-  echo "Paste it below and press Enter. Nothing will show while you paste — that's normal."
+  echo "No key yet? Type  skip  and press Enter — card payments stay hidden until you add one."
+  echo "When you paste a key nothing shows on screen — that's normal."
   while true; do
-    read -rsp "Stripe key: " SK; echo
+    read -rsp "Stripe key (or skip): " SK; echo
     SK=$(printf %s "$SK" | tr -d '[:space:]')
-    case "$SK" in sk_test_*|sk_live_*|rk_test_*|rk_live_*) break ;; *) echo "That doesn't look like a Stripe key (should start with sk_ or rk_). Try again." ;; esac
+    case "$SK" in
+      sk_test_*|sk_live_*|rk_test_*|rk_live_*) break ;;
+      skip|SKIP|Skip) SK="none"; break ;;
+      *) echo "That doesn't look like a Stripe key (should start with sk_ or rk_). Paste it again, or type skip." ;;
+    esac
   done
-  TMP=$(mktemp); chmod 600 "$TMP"; printf %s "$SK" > "$TMP"; unset SK
-  $FT functions:secrets:set STRIPE_SECRET --data-file "$TMP" --project "$PROJECT" --force || { rm -f "$TMP"; echo "Couldn't save the key — run the command again."; exit 1; }
-  rm -f "$TMP"
-  case "$(gcloud secrets versions access latest --secret STRIPE_SECRET --project "$PROJECT" 2>/dev/null | cut -c1-8)" in
-    *_test_*) echo "Saved TEST key — use card 4242 4242 4242 4242 to try it." ;;
-    *_live_*) echo "Saved LIVE key — real cards will be charged." ;;
-  esac
+  if [ "$SK" = "none" ] && [ -n "$CUR" ]; then
+    echo "Skipped — keeping the key that's already saved."
+  else
+    TMP=$(mktemp); chmod 600 "$TMP"; printf %s "$SK" > "$TMP"; unset SK
+    $FT functions:secrets:set STRIPE_SECRET --data-file "$TMP" --project "$PROJECT" --force || { rm -f "$TMP"; echo "Couldn't save the key — run the command again."; exit 1; }
+    rm -f "$TMP"
+  fi
 else
   echo "Stripe key already saved (to change it, run the command with --new-stripe-key)."
 fi
+VAL=$(gcloud secrets versions access latest --secret STRIPE_SECRET --project "$PROJECT" 2>/dev/null | cut -c1-8)
+case "$VAL" in sk_test_*|rk_test_*) CARD=true; echo "TEST key — try card 4242 4242 4242 4242." ;;
+               sk_live_*|rk_live_*) CARD=true; echo "LIVE key — real cards will be charged." ;;
+               *) CARD=false; echo "No Stripe key — card payments will be hidden in the app for now." ;; esac
 
 say "6/6 Uploading to Google (3-6 minutes, lots of text is normal)"
 if $FT deploy --only functions,firestore:rules --project "$PROJECT" --force --non-interactive; then
   say "DONE — TOWY TAXI server is live"
+  TOKEN=$(gcloud auth print-access-token 2>/dev/null)
+  if curl -sf -X PATCH -H "Authorization: Bearer $TOKEN" -H "x-goog-user-project: $PROJECT" -H "Content-Type: application/json" \
+     "https://firestore.googleapis.com/v1/projects/$PROJECT/databases/(default)/documents/config/public?updateMask.fieldPaths=cardPayments" \
+     -d "{\"fields\":{\"cardPayments\":{\"booleanValue\":$CARD}}}" >/dev/null; then
+    [ "$CARD" = true ] && echo "Card payments: ON in the app" || echo "Card payments: hidden in the app (add a key later with --new-stripe-key)"
+  else
+    echo "Note: couldn't update the card-payment switch — run the command once more later."
+  fi
   echo "Functions: createCheckout, confirmCheckout, bookingCreated, bookingUpdated, rideReminders"
 else
   echo

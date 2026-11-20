@@ -131,6 +131,8 @@
 (function(){
 "use strict";
 var $=TT.$, esc=TT.esc, F=TT.init("[DEFAULT]"), auth=F.auth, db=F.db, fns=F.app.functions("europe-west2");
+var cardOn=false;
+db.doc("config/public").onSnapshot(function(d){cardOn=!!(d.exists&&d.data().cardPayments===true);if(user)renderMine()},function(){});
 var user=null, mine=[], routes=[], unsubMine=null, prevStatus=null, pending=null, confirmation=null, verifier=null;
 
 function switchTab(tab){
@@ -318,11 +320,11 @@ function renderMine(){
     if(["priced","confirmed","done"].indexOf(b.status)>=0&&(b.driverName||typeof b.price==="number"))
       h+='<div class="reason">'+(b.driverName?'Your driver: <strong>'+esc(b.driverName)+'</strong>'+(b.driverCar?' &middot; '+esc(b.driverCar):''):'')+(typeof b.price==="number"?(b.driverName?' &middot; ':'')+TT.money(b.price):'')+'</div>';
     var pl=TT.payLabel(b); if(pl)h+='<p class="meta">'+esc(pl)+'</p>';
-    var cardOk=TT.canPayCard(b)&&TT.payOpenSoon(b);
+    var cardOk=cardOn&&TT.canPayCard(b)&&TT.payOpenSoon(b);
     if(b.status==="priced"){
       if(cardOk)h+='<button class="btn small ok" data-act="pay" data-id="'+b.id+'">💳 Book &amp; pay '+TT.money(b.price)+' by card</button>';
       h+='<button class="btn small '+(cardOk?'quiet':'ok')+'" data-act="acceptPrice" data-id="'+b.id+'">'+(cardOk?'Book — pay the driver':'OK — book it')+'</button><button class="btn small bad" data-act="cancel" data-id="'+b.id+'">No thanks</button>';
-      if(TT.canPayCard(b)&&!cardOk)h+='<p class="hint">Card payment opens 6 days before the ride.</p>';
+      if(cardOn&&TT.canPayCard(b)&&!cardOk)h+='<p class="hint">Card payment opens 6 days before the ride.</p>';
     }
     if(b.status==="confirmed"&&cardOk)h+='<button class="btn small ok" data-act="pay" data-id="'+b.id+'">💳 Pay '+TT.money(b.price)+' by card now</button>';
     if(b.status==="counter"){
