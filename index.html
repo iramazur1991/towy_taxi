@@ -80,7 +80,7 @@
       <p class="err" id="formErr"></p>
       <button class="btn" id="bookBtn">Request this ride</button>
       <p class="note">The first time, you'll sign in with Google or a text code.</p>
-      <p class="note"><a href="privacy.html" style="color:inherit">Privacy policy</a></p>
+      <p class="note"><a href="privacy.html" style="color:inherit">Privacy policy</a> · <a href="delete-account.html" style="color:inherit">Delete account</a></p>
     </div>
   </section>
 
@@ -125,11 +125,12 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
 <script src="core.js"></script>
 <script>
 (function(){
 "use strict";
-var $=TT.$, esc=TT.esc, F=TT.init("[DEFAULT]"), auth=F.auth, db=F.db;
+var $=TT.$, esc=TT.esc, F=TT.init("[DEFAULT]"), auth=F.auth, db=F.db, fns=F.app.functions("europe-west2");
 var user=null, mine=[], routes=[], unsubMine=null, prevStatus=null, pending=null, confirmation=null, verifier=null;
 
 function switchTab(tab){
@@ -157,6 +158,19 @@ function updateFare(){
 var today=new Date().toISOString().slice(0,10); $("fDate").value=today; $("fDate").min=today;
 try{var pr=JSON.parse(localStorage.getItem("tt_profile")||"null");
   if(pr){$("fName").value=pr.name||"";$("fPhone").value=pr.phone||"";$("fFrom").value=pr.from||"";$("fFromPc").value=pr.fromPc||""}}catch(e){}
+
+/* Back from Stripe Checkout */
+(function(){
+  var q=new URLSearchParams(location.search),id=q.get("paid"),sid=q.get("session"),cancelled=q.get("paycancel");
+  if(!id&&!cancelled)return;
+  history.replaceState(null,"",location.pathname);
+  switchTab("mine");
+  if(cancelled){setTimeout(function(){alert("Payment cancelled — nothing was charged.")},300);return}
+  fns.httpsCallable("confirmCheckout")({bookingId:id,sessionId:sid}).then(function(r){
+    var s=r.data&&r.data.status;
+    alert(s==="held"||s==="paid"?"✓ Payment done — your card is held and will be charged after the ride.":"We're checking your payment — it will show in My rides shortly.");
+  }).catch(function(){alert("We're checking your payment — it will show in My rides within a few minutes.")});
+})();
 
 /* Auth state */
 auth.onAuthStateChanged(function(u){
@@ -303,7 +317,14 @@ function renderMine(){
     h+='<p class="meta">'+esc(b.ref||"")+' &middot; '+esc(b.pax||"1")+' passenger'+((b.pax||"1")==="1"?"":"s")+(b.returnTime?' &middot; return '+esc(b.returnTime):'')+(b.estPrice!=null&&typeof b.price!=="number"?' &middot; usual fare '+TT.money(b.estPrice):'')+'</p>';
     if(["priced","confirmed","done"].indexOf(b.status)>=0&&(b.driverName||typeof b.price==="number"))
       h+='<div class="reason">'+(b.driverName?'Your driver: <strong>'+esc(b.driverName)+'</strong>'+(b.driverCar?' &middot; '+esc(b.driverCar):''):'')+(typeof b.price==="number"?(b.driverName?' &middot; ':'')+TT.money(b.price):'')+'</div>';
-    if(b.status==="priced")h+='<button class="btn small ok" data-act="acceptPrice" data-id="'+b.id+'">OK — book it</button><button class="btn small bad" data-act="cancel" data-id="'+b.id+'">No thanks</button>';
+    var pl=TT.payLabel(b); if(pl)h+='<p class="meta">'+esc(pl)+'</p>';
+    var cardOk=TT.canPayCard(b)&&TT.payOpenSoon(b);
+    if(b.status==="priced"){
+      if(cardOk)h+='<button class="btn small ok" data-act="pay" data-id="'+b.id+'">💳 Book &amp; pay '+TT.money(b.price)+' by card</button>';
+      h+='<button class="btn small '+(cardOk?'quiet':'ok')+'" data-act="acceptPrice" data-id="'+b.id+'">'+(cardOk?'Book — pay the driver':'OK — book it')+'</button><button class="btn small bad" data-act="cancel" data-id="'+b.id+'">No thanks</button>';
+      if(TT.canPayCard(b)&&!cardOk)h+='<p class="hint">Card payment opens 6 days before the ride.</p>';
+    }
+    if(b.status==="confirmed"&&cardOk)h+='<button class="btn small ok" data-act="pay" data-id="'+b.id+'">💳 Pay '+TT.money(b.price)+' by card now</button>';
     if(b.status==="counter"){
       h+='<div class="reason">Driver offers <strong>'+esc(TT.fmtWhen({date:b.offerDate,time:b.offerTime}))+'</strong>'+(b.offerNote?' — '+esc(b.offerNote):'')+'</div>';
       h+='<button class="btn small ok" data-act="acceptOffer" data-id="'+b.id+'">Accept new time</button><button class="btn small bad" data-act="cancel" data-id="'+b.id+'">Cancel ride</button>';
@@ -322,6 +343,12 @@ document.body.addEventListener("click",function(e){
   var t=e.target.closest("[data-act]");if(!t)return;
   var b=mine.filter(function(x){return x.id===t.dataset.id})[0];if(!b)return;
   var ref=db.doc("bookings/"+b.id),a=t.dataset.act,p=null;
+  if(a==="pay"){
+    t.disabled=true;t.textContent="Opening secure payment…";
+    fns.httpsCallable("createCheckout")({bookingId:b.id}).then(function(r){window.location.href=r.data.url})
+      .catch(function(err){t.disabled=false;renderMine();alert((err&&err.message)||"Couldn't start the payment — please try again.")});
+    return;
+  }
   if(a==="acceptPrice")p={status:"confirmed"};
   if(a==="acceptOffer")p={status:"confirmed",date:b.offerDate||b.date,time:b.offerTime||b.time};
   if(a==="cancel"){if(!confirm("Cancel this ride?"))return;p={status:"cancelled"}}

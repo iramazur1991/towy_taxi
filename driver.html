@@ -305,6 +305,7 @@ function renderBookings(){
     if(typeof b.price==="number")info.push(TT.money(b.price));
     else if(b.estPrice!=null)info.push('usual fare '+TT.money(b.estPrice));
     if(b.rating)info.push('rated '+b.rating+'/5 \u2605');
+    var pl=TT.payLabel(b); if(pl)info.push(esc(pl.replace(" — charged after the ride"," — charged when you mark completed")));
     if(info.length)h+='<p class="meta">'+info.join(' &middot; ')+'</p>';
     var mineOrAdmin=isAdmin||b.driverId===me.uid;
     if(b.status==="new")h+='<button class="btn small ok" data-act="accept" data-id="'+b.id+'">Accept</button><button class="btn small quiet" data-act="offer" data-id="'+b.id+'">Other time</button><button class="btn small bad" data-act="decline" data-id="'+b.id+'">Decline</button>';

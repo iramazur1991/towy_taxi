@@ -1,25 +1,21 @@
 #!/usr/bin/env bash
 # TOWY TAXI — one-command server setup for Google Cloud Shell
-# Usage:  bash <(curl -sL https://iramazur1991.github.io/towy_taxi/deploy-server.sh)
+#   bash <(curl -sL https://iramazur1991.github.io/towy_taxi/deploy-server.sh)
+#   change the Stripe key later:  bash <(curl -sL https://iramazur1991.github.io/towy_taxi/deploy-server.sh) --new-stripe-key
 set -u
 PROJECT=towy-taxi
 FT="npx -y firebase-tools@13"
 say(){ printf "\n\033[1;33m== %s ==\033[0m\n" "$1"; }
 
-say "1/5 Checking project"
+say "1/6 Checking project"
 gcloud config set project "$PROJECT" >/dev/null 2>&1
 echo "Switching on required Google services..."
-gcloud services enable cloudbilling.googleapis.com firestore.googleapis.com --project "$PROJECT" >/dev/null 2>&1 && sleep 20
+gcloud services enable cloudbilling.googleapis.com firestore.googleapis.com secretmanager.googleapis.com --project "$PROJECT" >/dev/null 2>&1 && sleep 15
 LOC=$(gcloud firestore databases describe --database='(default)' --project "$PROJECT" --format='value(locationId)' 2>/dev/null)
-case "$LOC" in
-  nam5) REGION=us-central1 ;;
-  eur3) REGION=europe-west1 ;;
-  "")   REGION=europe-west2 ;;
-  *)    REGION="$LOC" ;;
-esac
+case "$LOC" in nam5) REGION=us-central1 ;; eur3) REGION=europe-west1 ;; "") REGION=europe-west2 ;; *) REGION="$LOC" ;; esac
 echo "Database: ${LOC:-unknown}  ->  server region: $REGION"
 
-say "2/5 Writing server files"
+say "2/6 Writing server files"
 rm -rf ~/towy-server && mkdir -p ~/towy-server/functions && cd ~/towy-server || exit 1
 cat > firebase.json <<'TOWYEOF'
 { "functions": [{ "source": "functions", "codebase": "default" }], "firestore": { "rules": "firestore.rules" } }
@@ -28,8 +24,7 @@ cat > .firebaserc <<'TOWYEOF'
 { "projects": { "default": "towy-taxi" } }
 TOWYEOF
 cat > functions/package.json <<'TOWYEOF'
-{"name":"towy-functions","private":true,"main":"index.js","engines":{"node":"22"},
- "dependencies":{"firebase-admin":"^12.7.0","firebase-functions":"^6.1.0"}}
+{"name": "towy-functions", "private": true, "main": "index.js", "engines": {"node": "22"}, "dependencies": {"firebase-admin": "^12.7.0", "firebase-functions": "^6.1.0", "stripe": "^17.7.0"}}
 TOWYEOF
 cat > firestore.rules <<'TOWYEOF'
 rules_version = '2';
@@ -85,7 +80,7 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.status == 'new'
-        && !request.resource.data.keys().hasAny(['price', 'driverId', 'driverName', 'driverCar', 'acceptedBy', 'rating']);
+        && !request.resource.data.keys().hasAny(['price', 'driverId', 'driverName', 'driverCar', 'acceptedBy', 'rating', 'payment', 'reminded']);
 
       // Staff can update anything. Customers can only accept, cancel or rate.
       allow update: if isStaff() || (
@@ -115,6 +110,13 @@ cat > functions/index.js <<'TOWYEOF'
 const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { setGlobalOptions, logger } = require("firebase-functions/v2");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { defineSecret } = require("firebase-functions/params");
+const STRIPE_SECRET = defineSecret("STRIPE_SECRET");
+let _stripe = null;
+function stripe() { if (!_stripe) _stripe = require("stripe")(STRIPE_SECRET.value()); return _stripe; }
+const HOLD_DAYS = 6;            // card holds last ~7 days, so card payment opens 6 days before the ride
+const pence = (v) => Math.round(Number(v) * 100);
 const admin = require("firebase-admin");
 admin.initializeApp();
 const db = admin.firestore();
@@ -182,25 +184,101 @@ async function toStaff(title, body, onlyUids) {
   return send(ok, title, body, APP + "driver.html", "driver-icon-192.png");
 }
 
+
+/* ---------------- Stripe card payments (hold before, charge after) ---------------- */
+exports.createCheckout = onCall({ secrets: [STRIPE_SECRET] }, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Please sign in first.");
+  const id = String((req.data && req.data.bookingId) || "");
+  if (!id) throw new HttpsError("invalid-argument", "No booking.");
+  const ref = db.doc("bookings/" + id), snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "Booking not found.");
+  const b = snap.data();
+  if (b.uid !== req.auth.uid) throw new HttpsError("permission-denied", "This isn't your booking.");
+  if (!["priced", "confirmed"].includes(b.status) || typeof b.price !== "number" || b.price <= 0)
+    throw new HttpsError("failed-precondition", "This ride doesn't have a price to pay yet.");
+  const ps = b.payment && b.payment.status;
+  if (ps === "held" || ps === "paid") throw new HttpsError("already-exists", "This ride is already paid.");
+  if (londonToUtc(b.date, b.time) - Date.now() > HOLD_DAYS * 86400000)
+    throw new HttpsError("failed-precondition", "Card payment opens 6 days before your ride.");
+  const desc = ((b.ref || "") + " · " + when(b) + " · " + b.from + " → " + b.to).slice(0, 300);
+  const params = {
+    mode: "payment",
+    line_items: [{ quantity: 1, price_data: { currency: "gbp", unit_amount: pence(b.price),
+      product_data: { name: "TOWY TAXI ride " + (b.ref || ""), description: desc } } }],
+    payment_intent_data: { capture_method: "manual", description: desc, metadata: { bookingId: id, ref: b.ref || "" } },
+    metadata: { bookingId: id },
+    success_url: APP + "?paid=" + encodeURIComponent(id) + "&session={CHECKOUT_SESSION_ID}",
+    cancel_url: APP + "?paycancel=" + encodeURIComponent(id)
+  };
+  if (req.auth.token && req.auth.token.email) params.customer_email = req.auth.token.email;
+  const s = await stripe().checkout.sessions.create(params);
+  await ref.update({ payment: { status: "pending", sessionId: s.id, amount: b.price, updatedAt: Date.now() } });
+  return { url: s.url };
+});
+
+/* Read the truth from Stripe and store it on the booking */
+async function syncSession(id, sessionId) {
+  const s = await stripe().checkout.sessions.retrieve(sessionId, { expand: ["payment_intent"] });
+  if (!s.metadata || s.metadata.bookingId !== id) throw new HttpsError("permission-denied", "Payment doesn't match this booking.");
+  const ref = db.doc("bookings/" + id), snap = await ref.get();
+  if (!snap.exists) return "missing";
+  const b = snap.data(), cur = b.payment && b.payment.status, pi = s.payment_intent && typeof s.payment_intent === "object" ? s.payment_intent : null;
+  let st = null;
+  if (pi) st = pi.status === "requires_capture" ? "held" : pi.status === "succeeded" ? "paid" : pi.status === "canceled" ? "released" : null;
+  if (!st && s.status === "expired") st = "none";
+  if (!st || cur === "paid" || cur === st) return cur || "pending";
+  if (st === "held" && ["cancelled", "declined"].includes(b.status)) {           // ride was cancelled while paying
+    await stripe().paymentIntents.cancel(pi.id).catch((e) => logger.warn("release", e.message));
+    st = "released";
+  }
+  const upd = { payment: st === "none" ? { status: "none", updatedAt: Date.now() } :
+    { status: st, sessionId: s.id, intentId: pi ? pi.id : null, amount: pi ? pi.amount / 100 : b.price, updatedAt: Date.now() } };
+  if ((st === "held" || st === "paid") && b.status === "priced") upd.status = "confirmed";  // paying = accepting the price
+  await ref.update(upd);
+  return st;
+}
+exports.confirmCheckout = onCall({ secrets: [STRIPE_SECRET] }, async (req) => {
+  const id = String((req.data && req.data.bookingId) || ""), sid = String((req.data && req.data.sessionId) || "");
+  if (!id || !/^cs_(test|live)_/.test(sid)) throw new HttpsError("invalid-argument", "Missing payment details.");
+  return { status: await syncSession(id, sid) };
+});
+
 exports.bookingCreated = onDocumentCreated("bookings/{id}", async (e) => {
   const b = e.data && e.data.data(); if (!b) return;
   await toStaff("New booking " + (b.ref || ""), when(b) + " · " + b.from + " → " + b.to, null);
 });
 
-exports.bookingUpdated = onDocumentUpdated("bookings/{id}", async (e) => {
+exports.bookingUpdated = onDocumentUpdated({ document: "bookings/{id}", secrets: [STRIPE_SECRET] }, async (e) => {
   const was = e.data.before.data(), b = e.data.after.data();
   if (!was || !b || was.status === b.status) return;
-  const r = b.ref || "", s = b.status, p = was.status;
+  const r = b.ref || "", s = b.status, p = was.status, ref = e.data.after.ref;
+  const pay = b.payment || {};
+  if (pay.status === "held" && pay.intentId) {
+    if (s === "done") {
+      try {
+        const amt = Math.min(pence(typeof b.price === "number" ? b.price : pay.amount), pence(pay.amount));
+        await stripe().paymentIntents.capture(pay.intentId, { amount_to_capture: amt });
+        await ref.update({ "payment.status": "paid", "payment.capturedAt": Date.now() });
+      } catch (err) {
+        logger.error("capture failed", err.message);
+        await ref.update({ "payment.status": "capture_failed", "payment.error": String(err.message).slice(0, 200) });
+      }
+    }
+    if (s === "cancelled" || s === "declined") {
+      try { await stripe().paymentIntents.cancel(pay.intentId); await ref.update({ "payment.status": "released" }); }
+      catch (err) { logger.error("release failed", err.message); }
+    }
+  }
   const drv = b.driverId ? [b.driverId] : [];
   if (s === "priced") return toClient(b, "TOWY TAXI " + r, "Price offered: " + money(b.price) + (b.driverName ? " · driver " + b.driverName : "") + " — tap to accept");
   if (s === "counter") return toClient(b, "TOWY TAXI " + r, "We can't do " + when(b) + " — we offer " + when({ date: b.offerDate, time: b.offerTime }) + ". Tap to accept");
   if (s === "declined") return toClient(b, "TOWY TAXI " + r, "Sorry, we can't take your ride on " + when(b) + (b.reason ? " — " + b.reason : ""));
   if (s === "confirmed" && p === "new") return toClient(b, "TOWY TAXI " + r, "Your ride on " + when(b) + " is confirmed" + (b.driverName ? " · driver " + b.driverName : ""));
-  if (s === "confirmed" && (p === "priced" || p === "counter")) return toStaff("Customer accepted " + r, when(b) + " · " + b.name, drv);
+  if (s === "confirmed" && (p === "priced" || p === "counter")) return toStaff("Customer accepted " + r, when(b) + " · " + b.name + (pay.status === "held" ? " · card held " + money(pay.amount) : ""), drv);
   if (s === "cancelled") return toStaff("Customer cancelled " + r, when(b) + " · " + b.name, drv);
 });
 
-exports.rideReminders = onSchedule({ schedule: "every 10 minutes", timeZone: "Europe/London" }, async () => {
+exports.rideReminders = onSchedule({ schedule: "every 10 minutes", timeZone: "Europe/London", secrets: [STRIPE_SECRET] }, async () => {
   const now = Date.now();
   const s = await db.collection("bookings").where("status", "==", "confirmed").get();
   const jobs = [];
@@ -215,29 +293,55 @@ exports.rideReminders = onSchedule({ schedule: "every 10 minutes", timeZone: "Eu
     })());
   });
   await Promise.all(jobs);
+  // catch payments where the customer never came back to the app
+  const pend = await db.collection("bookings").where("payment.status", "==", "pending").get();
+  for (const d of pend.docs) {
+    const sid = d.get("payment.sessionId");
+    if (sid) await syncSession(d.id, sid).catch((err) => logger.warn("sync", err.message));
+  }
 });
 
 TOWYEOF
 sed -i "s/__REGION__/$REGION/" functions/index.js
 
-say "3/5 Installing (about 1 minute)"
+say "3/6 Installing (about 1 minute)"
 ( cd functions && npm install --no-audit --no-fund --loglevel=error ) || { echo "npm install failed — run the command again."; exit 1; }
 
-say "4/5 Signing in to Firebase"
+say "4/6 Signing in to Firebase"
 if ! $FT projects:list >/dev/null 2>&1; then
   echo "Open the link below, pick your Google account, press Allow,"
   echo "copy the code it shows and paste it here, then press Enter."
   $FT login --no-localhost || { echo "Sign-in didn't finish — run the command again."; exit 1; }
 fi
 
-say "5/5 Uploading to Google (3-6 minutes, lots of text is normal)"
+say "5/6 Stripe key"
+if [ "${1:-}" = "--new-stripe-key" ] || ! gcloud secrets describe STRIPE_SECRET --project "$PROJECT" >/dev/null 2>&1; then
+  echo "In Stripe: Developers -> API keys. Copy the restricted key (rk_...) or the secret key (sk_...)."
+  echo "Paste it below and press Enter. Nothing will show while you paste — that's normal."
+  while true; do
+    read -rsp "Stripe key: " SK; echo
+    SK=$(printf %s "$SK" | tr -d '[:space:]')
+    case "$SK" in sk_test_*|sk_live_*|rk_test_*|rk_live_*) break ;; *) echo "That doesn't look like a Stripe key (should start with sk_ or rk_). Try again." ;; esac
+  done
+  TMP=$(mktemp); chmod 600 "$TMP"; printf %s "$SK" > "$TMP"; unset SK
+  $FT functions:secrets:set STRIPE_SECRET --data-file "$TMP" --project "$PROJECT" --force || { rm -f "$TMP"; echo "Couldn't save the key — run the command again."; exit 1; }
+  rm -f "$TMP"
+  case "$(gcloud secrets versions access latest --secret STRIPE_SECRET --project "$PROJECT" 2>/dev/null | cut -c1-8)" in
+    *_test_*) echo "Saved TEST key — use card 4242 4242 4242 4242 to try it." ;;
+    *_live_*) echo "Saved LIVE key — real cards will be charged." ;;
+  esac
+else
+  echo "Stripe key already saved (to change it, run the command with --new-stripe-key)."
+fi
+
+say "6/6 Uploading to Google (3-6 minutes, lots of text is normal)"
 if $FT deploy --only functions,firestore:rules --project "$PROJECT" --force --non-interactive; then
   say "DONE — TOWY TAXI server is live"
-  echo "Check: Firebase console -> Functions: bookingCreated, bookingUpdated, rideReminders"
+  echo "Functions: createCheckout, confirmCheckout, bookingCreated, bookingUpdated, rideReminders"
 else
   echo
   echo "Something failed. If the red text mentions Eventarc, permission or 'retry',"
-  echo "that's normal on the very first setup: wait 5 minutes and run the SAME command again."
+  echo "that's normal on the first setup: wait 5-10 minutes and run the SAME command again."
   echo "Otherwise take a screenshot of the red text and send it to Claude."
   exit 1
 fi

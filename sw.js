@@ -6,7 +6,7 @@ try {
     projectId: "towy-taxi", messagingSenderId: "545252559547", appId: "1:545252559547:web:c370e91c47fa02ff63b79e" });
   firebase.messaging();
 } catch (e) {}
-const CACHE='towy-v9';
+const CACHE='towy-v10';
 const ASSETS=['./','./index.html','./driver.html','./core.js','./style.css','./manifest.json','./driver-manifest.json','./icon-192.png','./icon-512.png','./driver-icon-192.png','./driver-icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).catch(()=>{}));self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))));self.clients.claim()});

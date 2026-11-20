@@ -194,6 +194,23 @@ window.TT = (function () {
     };
   }
 
+  /* Card payment status label */
+  function payLabel(b) {
+    var p = b.payment || {};
+    if (p.status === "held") return "💳 Card held " + money(p.amount) + " — charged after the ride";
+    if (p.status === "paid") return "💳 Paid by card " + money(p.amount);
+    if (p.status === "released") return "💳 Card hold released — nothing charged";
+    if (p.status === "capture_failed") return "💳 Card charge failed";
+    if (p.status === "pending") return "💳 Card payment started";
+    return "";
+  }
+  function canPayCard(b) {
+    var p = (b.payment || {}).status;
+    if (["priced", "confirmed"].indexOf(b.status) < 0 || typeof b.price !== "number" || b.price <= 0) return false;
+    return p !== "held" && p !== "paid";
+  }
+  function payOpenSoon(b) { var t = new Date(b.date + "T" + (b.time || "00:00")).getTime(); return t - Date.now() <= 6 * 86400000; }
+
   function mapsLink(lat, lng, text) {
     var dest = lat ? (lat + "," + lng) : text;
     return "https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(dest);
@@ -209,7 +226,7 @@ window.TT = (function () {
     $: $, esc: esc, normPhone: normPhone, toE164: toE164, normPc: normPc, fmtWhen: fmtWhen, chip: chip, money: money,
     makeRef: makeRef, lookupPc: lookupPc, pcCheck: pcCheck, findFare: findFare, beep: beep, alertUser: alertUser,
     askNotify: askNotify, notifyDriver: notifyDriver, notifyStaff: notifyStaff, registerPush: registerPush, pushState: pushState, openModal: openModal, closeModal: closeModal, picker: picker,
-    mapsLink: mapsLink, routeLink: routeLink
+    mapsLink: mapsLink, routeLink: routeLink, payLabel: payLabel, canPayCard: canPayCard, payOpenSoon: payOpenSoon
   };
 })();
 if ("serviceWorker" in navigator) { window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); }); }
